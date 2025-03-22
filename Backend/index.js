@@ -15,7 +15,9 @@ app.post("/register", async(req, res) => {
   const { username, password } = req.body;
 
   try {
+    
     // check if user exists in db
+    console.log(pool.database)
     const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
 
     // user exists
@@ -24,6 +26,8 @@ app.post("/register", async(req, res) => {
     }
 
     // insert new user in db
+    console.log(username);
+    console.log(password);
     await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, password]);
 
     res.status(201).json({ message: 'User registered successfully' });
