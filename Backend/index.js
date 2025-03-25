@@ -51,9 +51,12 @@ app.post("/login", async(req, res) => {
     // check valid password
     const validPassword = password == user.rows[0].password;
 
+
     if (!validPassword) {
       return res.status(400).json({ message: 'Invalid username or password' });
     }
+
+    return res.status(201).json({ message: 'Login success' });
 
   } catch (error) {
     console.error(error.message);

@@ -1,19 +1,21 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import './Login.css'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom';
+import { UserContext } from './App'
 
 function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const { setUser } = useContext(UserContext);
 
   function handleLogin(event){
     event.preventDefault();
     axios.post('http://localhost:3001/login', {username, password}).then(res => {
-      if(res.data == "success"){
+      if(res.data.message == "Login success"){
         //go to home page
-        console.log("to homepage");
+        setUser(username);
         navigate('/home')
       } else {
         //display "invalid username and/or password"
@@ -25,9 +27,9 @@ function Login() {
   function handleRegister(event){
     event.preventDefault();
     axios.post('http://localhost:3001/register', {username, password}).then(res => {
-      if(res.data == "success"){
+      if(res.data.message == "User registered successfully"){
         //go to home page
-        console.log("to homepage")
+        setUser(username);
         navigate('/home')
       } else {
         //display "username is taken"
