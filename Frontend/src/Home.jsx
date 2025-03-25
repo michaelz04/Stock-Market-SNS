@@ -9,7 +9,12 @@ function Home() {
     console.log(user);
 
     return(
-        <Navbar />
+        <div className='Body'>
+            <Navbar />
+            <h2>
+                Hello {user}
+            </h2>
+        </div>
     )
 }
 
