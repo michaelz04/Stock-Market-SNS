@@ -15,6 +15,9 @@ function Login() {
 
   function handleLogin(event){
     event.preventDefault();
+    setLoginError(false);
+    setRegisterError(false);
+
     axios.post('http://localhost:3001/login', {username, password}).then(res => {
       if(res.data.message == "Login success"){
         //go to home page
@@ -33,7 +36,9 @@ function Login() {
   }
   function handleRegister(event){
     event.preventDefault();
-
+    setLoginError(false);
+    setRegisterError(false);
+    
     if (username == "" || password == ""){
       setRegisterError(true)
       return;

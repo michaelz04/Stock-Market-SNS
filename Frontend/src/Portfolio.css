@@ -1,0 +1,7 @@
+.body {
+    display: flex;
+    flex-direction: column;
+    margin: 0px 200px;
+    justify-self: center;
+    gap: 20px;
+}

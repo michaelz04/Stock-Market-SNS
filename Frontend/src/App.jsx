@@ -15,7 +15,6 @@ import Navbar from "./Navbar";
 export const UserContext = createContext();
 
 function App() {
-  //const [user, setUser] = useState("");
   const [user, setUser] = useState(() => localStorage.getItem("user"));
 
   useEffect(() => {
