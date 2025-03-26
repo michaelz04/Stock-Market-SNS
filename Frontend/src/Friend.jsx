@@ -1,14 +1,12 @@
-import { useContext } from 'react';
-import { UserContext } from './App';
+
 
 function Friend (){
-    //const user = localStorage.getItem("user");
-    const {user}  = useContext(UserContext);
+    const user = localStorage.getItem("user");
 
     return(
         <div className='Body'>
             <h2>
-                Hello mr {user}
+                Hello {user}
             </h2>
         </div>
     )
