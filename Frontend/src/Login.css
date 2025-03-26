@@ -55,6 +55,8 @@
     cursor: pointer;
 }
 
-.gray{
-    background: grey;
+.error p{
+    display: flex;
+    justify-self: center;
+    color: black;
 }
