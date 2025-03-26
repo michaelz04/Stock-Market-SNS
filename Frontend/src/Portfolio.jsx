@@ -6,7 +6,9 @@ function Portfolio() {
   const user = localStorage.getItem("user");
 
   const [cash, setCash] = useState(0);
+  const [portfolioName, setPortfolioName] = useState("");
   const [portfolios, setPortfolios] = useState([]);
+  const [refresh, setRefresh] = useState(false);
 
   useEffect(() => {
     const fetchPortfolios = async () => {
@@ -14,7 +16,6 @@ function Portfolio() {
         const response = await axios.post("http://localhost:3001/portfolio", {
           user,
         });
-        console.log(response.data.portfolios);
         setPortfolios(response.data.portfolios);
       } catch (error) {
         console.error("Error fetching portfolios:", error);
@@ -22,18 +23,21 @@ function Portfolio() {
     };
 
     fetchPortfolios();
-  }, [user]);
+  }, [user, refresh]);
 
   function handleCreatePortfolio(event) {
     event.preventDefault();
 
-    console.log(user);
-
     axios
-      .post("http://localhost:3001/createportfolio", { user, cash })
+      .post("http://localhost:3001/createportfolio", {
+        user,
+        portfolioName,
+        cash,
+      })
       .then((res) => {
         if (res.data.message == "success") {
           // success
+          setRefresh((prev) => !prev);
         } else {
           // error
           console.log("error");
@@ -48,21 +52,34 @@ function Portfolio() {
         <ul>
           {portfolios.length > 0 ? (
             portfolios.map((portfolio) => (
-              <li key={portfolio.portfolioid}>
-                <p>Portfolio: {portfolio.portfolioid}</p>
+              <li className="portfolios" key={portfolio.portfolioid}>
+                <div className="portfolio-center">
+                  <div>Portfolio: {portfolio.portfolioid}</div>
+                  <div>Cash: {portfolio.cash}</div>
+                </div>
               </li>
             ))
           ) : (
             <p>No portfolios found. Create one to get started!</p>
           )}
         </ul>
-        <button onClick={handleCreatePortfolio}>Create New Portfolio</button>
+
+        <div className="input">
+          <input
+            type="text"
+            placeholder="Portfolio Name"
+            onChange={(e) => setPortfolioName(e.target.value)}
+          />
+        </div>
         <div className="input">
           <input
             type="text"
             placeholder="Cash"
             onChange={(e) => setCash(e.target.value)}
           />
+        </div>
+        <div className="create-portfolio" onClick={handleCreatePortfolio}>
+          Create New Portfolio
         </div>
       </div>
     </div>
