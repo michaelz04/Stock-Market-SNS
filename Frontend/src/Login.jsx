@@ -6,7 +6,7 @@ import { UserContext } from './App'
 
 function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('')
+  const [userId, setUserId] = useState('')
   const [password, setPassword] = useState('')
   const { setUser } = useContext(UserContext);
 
@@ -17,11 +17,10 @@ function Login() {
     event.preventDefault();
     setLoginError(false);
     setRegisterError(false);
-
-    axios.post('http://localhost:3001/login', {username, password}).then(res => {
+    axios.post('http://localhost:3001/login', {userId, password}).then(res => {
       if(res.data.message == "Login success"){
         //go to home page
-        setUser(username);
+        setUser(userId);
         navigate('/home');
       } else {
         //display "invalid username and/or password"
@@ -43,10 +42,10 @@ function Login() {
       setRegisterError(true)
       return;
     }
-    axios.post('http://localhost:3001/register', {username, password}).then(res => {
+    axios.post('http://localhost:3001/register', {userId, password}).then(res => {
       if(res.data.message == "User registered successfully"){
         //go to home page
-        setUser(username);
+        setUser(userId);
         navigate('/home');
       } else {
         //display "username is taken"
@@ -68,7 +67,7 @@ function Login() {
       </div>
       <div className='inputs'>
         <div className='input'>
-          <input type="text" placeholder='Username' onChange={e=>setUsername(e.target.value)}/>
+          <input type="text" placeholder='Username' onChange={e=>setUserId(e.target.value)}/>
         </div>
         <div className='input'>
           <input type="text" placeholder='Password'onChange={e=>setPassword(e.target.value)}/>

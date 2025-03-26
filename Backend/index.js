@@ -11,15 +11,14 @@ app.use(express.json());
 // Routes
 
 // register
-app.post("/register", async(req, res) => {
-  const { username, password } = req.body;
+app.post("/register", async (req, res) => {
+  const { userId, password } = req.body;
 
   try {
-    
     // check if user exists in db
 
 
-    const userExists = await pool.query('SELECT * FROM users WHERE userId = $1', [username]);
+    const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
 
     // user exists
     if (userExists.rows.length > 0) {
@@ -28,65 +27,49 @@ app.post("/register", async(req, res) => {
 
     // insert new user in db
 
-    await pool.query('INSERT INTO users (userId, password) VALUES ($1, $2)', [username, password]);
+    await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, password]);
 
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     console.error(error.message);
+    res.status(500).json({ error: 'Server error' });
   }
-})
+});
 
 // login
-app.post("/login", async(req, res) => {
-  const { username, password } = req.body;
+app.post("/login", async (req, res) => {
+  const { userId, password } = req.body;
 
   try {
     // check if user exists
-    const user = await pool.query('SELECT * FROM users WHERE userId = $1', [username]);
+    const user = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
 
     if (user.rows.length === 0) {
-      return res.status(400).json({ message: 'Invalid username or password' });
+      return res.status(400).json({ message: 'Invalid user ID or password' });
     }
 
     // check valid password
-    const validPassword = password == user.rows[0].password;
-
+    const validPassword = password === user.rows[0].password;
 
     if (!validPassword) {
-      return res.status(400).json({ message: 'Invalid username or password' });
+      return res.status(400).json({ message: 'Invalid user ID or password' });
     }
 
-    return res.status(201).json({ message: 'Login success' });
-
+    return res.status(200).json({ message: 'Login success' });
   } catch (error) {
     console.error(error.message);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
 // get portfolio
-app.post("/portfolio", async(req, res) => {
-  const { user } = req.body;
+app.get("/portfolio", async(req, res) => {
 
-  try {
-    
-    const portfolio = await pool.query('SELECT portfolioId FROM Portfolio WHERE userId = $1', [user]);
-
-    res.status(201).json({ message: "success", portfolios: portfolio.rows });
-
-  } catch (error) {
-    console.log(error.message);
-  }
 });
 
-// create portfolio
-app.post("/createportfolio", async(req, res) => {
-  const { user, cash } = req.body;
-
-  await pool.query('INSERT INTO Portfolio (userId, cash) VALUES ($1, $2)', [user, cash]);
-
-  res.status(201).json({ message: 'success' });
-})
-
+app.get('/', (req, res) => {
+  res.status(200).send('Hello World!');
+});
 
 app.listen(port, () => {
   console.log(`App running on port ${port}.`);
