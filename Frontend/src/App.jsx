@@ -1,46 +1,50 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { useState, createContext, useContext } from "react";
-import Login from './Login';
-import Home from './Home';
-import Portfolio from './Portfolio';
-import Stocklist from './Stocklist';
-import Friend from './Friend';
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
+import { useState, createContext, useEffect } from "react";
+import Login from "./Login";
+import Home from "./Home";
+import Portfolio from "./Portfolio";
+import Stocklist from "./Stocklist";
+import Friend from "./Friend";
+import Navbar from "./Navbar";
 
 export const UserContext = createContext();
 
 function App() {
-  const [user, setUser] = useState("");
+  //const [user, setUser] = useState("");
+  const [user, setUser] = useState(() => localStorage.getItem("user"));
+
+  useEffect(() => {
+    localStorage.setItem("user", user);
+  }, [user]);
 
   return (
-    <Router>
+    <UserContext.Provider value={{ user, setUser }}>
+      <Router>
+        <AppContent />
+      </Router>
+    </UserContext.Provider>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+
+  return (
+    <>
+      {location.pathname !== "/" && <Navbar />}
       <Routes>
-        <Route path="/" element={
-          <UserContext.Provider value={{user, setUser}}>
-            <Login />
-          </UserContext.Provider>
-          } />
-        <Route path="/home" element={
-          <UserContext.Provider value={user}>
-            <Home />
-          </UserContext.Provider>
-          } />
-        <Route path="/portfolios" element={
-          <UserContext.Provider value={user}>
-            <Portfolio />
-          </UserContext.Provider>
-          } />
-        <Route path="/stocklists" element={
-          <UserContext.Provider value={user}>
-            <Stocklist />
-          </UserContext.Provider>
-          } />
-        <Route path="/friends" element={
-          <UserContext.Provider value={user}>
-            <Friend />
-          </UserContext.Provider>
-          } />
+        <Route path="/" element={<Login />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/portfolios" element={<Portfolio />} />
+        <Route path="/stocklists" element={<Stocklist />} />
+        <Route path="/friends" element={<Friend />} />
       </Routes>
-    </Router>
+    </>
   );
 }
 
