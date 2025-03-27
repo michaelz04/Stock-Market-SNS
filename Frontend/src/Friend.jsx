@@ -15,13 +15,27 @@ function Friend() {
 
     const [friendsList, setFriendsList] = useState([]);
 
+    const [allUsers, setAllUsers] = useState([]);
+
     useEffect(() => {
         if (user) {
             fetchPendingRequests();
             fetchOutgoingRequests();
             fetchFriendsList();
+            fetchAllUsers();
         }
     }, [user]);
+
+    const fetchAllUsers = async () => {
+        try {
+          const response = await axios.get(`${API_BASE_URL}/all-users`, {
+            params: { currentUser: user }
+          });
+          setAllUsers(response.data.users);
+        } catch (error) {
+          console.error("Error fetching users:", error);
+        }
+      };
 
     const fetchFriendsList = async () => {
         try {
@@ -209,6 +223,16 @@ function Friend() {
                  Friends List ({friendsList.length})
                 </button>
 
+                <button 
+                className={activeTab === "allUsers" ? "active" : ""}
+                onClick={() => {
+                setActiveTab("allUsers");
+                fetchAllUsers();
+                }}
+            >
+                All Users ({allUsers.length})
+            </button>
+
             </div>
             
             {activeTab === "send" && (
@@ -300,7 +324,18 @@ function Friend() {
                 )}
             </div>
             )}
-            
+
+            {activeTab === "allUsers" && (
+            <div className="users-list">
+                <h3>All Users</h3>
+                <ul>
+                {allUsers.map((userData, index) => (
+                    <li key={index}>{userData.userid}</li>
+                ))}
+                </ul>
+            </div>
+            )}
+                        
             {message && <div className="message">{message}</div>}
         </div>
     );

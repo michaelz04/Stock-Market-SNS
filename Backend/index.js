@@ -122,6 +122,7 @@ A) already_friends
 B) outgoing_request_exists
 C) incoming_request_exists
 D) no relationship
+This function is primarily for front-end display.
 */
 app.get("/friendship-status", async (req, res) => {
   const { user1, user2 } = req.query;
@@ -163,7 +164,7 @@ app.get("/friendship-status", async (req, res) => {
   }
 });
 
-// Send friend request
+// Send friend request, actually does the work in backend
 app.post("/send-friend-request", async (req, res) => {
   const { senderId, receiverId } = req.body;
   
@@ -217,8 +218,9 @@ app.post("/send-friend-request", async (req, res) => {
       );
       
       // Create friendship (ensuring user1 < user2)
-      const user1 = senderId < receiverId ? senderId : receiverId;
-      const user2 = senderId < receiverId ? receiverId : senderId;
+      // Somehow needs localeCompare to ensure user1 < user2
+      const user1 = senderId.localeCompare(receiverId) < 0 ? senderId : receiverId;
+      const user2 = senderId.localeCompare(receiverId) < 0 ? receiverId : senderId;
       
       await pool.query(
         "INSERT INTO FriendsWith (user1, user2) VALUES ($1, $2)",
@@ -292,9 +294,9 @@ app.post("/respond-to-request", async (req, res) => {
     
     if (action === 'accept') {
       // Create friendship (ensuring user1 < user2)
-      const user1 = senderId < receiverId ? senderId : receiverId;
-      const user2 = senderId < receiverId ? receiverId : senderId;
-      
+      const user1 = senderId.localeCompare(receiverId) < 0 ? senderId : receiverId;
+      const user2 = senderId.localeCompare(receiverId) < 0 ? receiverId : senderId;
+
       await pool.query(
         "INSERT INTO FriendsWith (user1, user2) VALUES ($1, $2)",
         [user1, user2]
@@ -376,6 +378,21 @@ app.post("/remove-friend", async (req, res) => {
     );
 
     res.json({ message: "Friend removed successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+//So a user can see all potential people to add.
+app.get("/all-users", async (req, res) => {
+  const { currentUser } = req.query;
+
+  try {
+    const users = await pool.query(
+      "SELECT userId FROM Users WHERE userId != $1",
+      [currentUser]
+    );
+    res.json({ users: users.rows });
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ message: "Server error" });
