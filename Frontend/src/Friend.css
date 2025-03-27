@@ -1,0 +1,186 @@
+.friend-body {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.friend-request-section {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    max-width: 400px;
+    background-color: #f9f9f9;
+}
+
+.friend-request-section h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.friend-request-section input {
+    padding: 8px;
+    margin-right: 10px;
+    width: 200px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.friend-request-section button {
+    padding: 8px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.friend-request-section button:hover {
+    background-color: #45a049;
+}
+
+.message {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tabs button {
+    padding: 10px 15px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    margin-right: 5px;
+    border-radius: 4px 4px 0 0;
+    color: white;
+}
+
+.tabs button.active {
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: -1px;
+    color: white;
+}
+
+.requests-section {
+    margin-top: 20px;
+}
+
+.requests-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.request-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #eee;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.request-item span {
+    font-weight: bold;
+}
+
+.accept-btn {
+    background-color: #5cb85c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+
+.decline-btn {
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background-color: #f0ad4e;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.accept-btn:hover {
+    background-color: #4cae4c;
+}
+
+.decline-btn:hover {
+    background-color: #c9302c;
+}
+
+.cancel-btn:hover {
+    background-color: #ec971f;
+}
+
+.friends-section {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #2c2c2c;
+    border-radius: 8px;
+    color: white;
+  }
+  
+  .friends-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .friend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #444;
+  }
+  
+  .friend-item:last-child {
+    border-bottom: none;
+  }
+  
+  .friend-item span {
+    font-size: 16px;
+  }
+  
+  .remove-btn {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .remove-btn:hover {
+    background-color: #ff1a1a;
+  }
+  
+  /* Tab styling for friends tab */
+  .tabs button.active {
+    background-color: #4CAF50;
+    color: white;
+  }
