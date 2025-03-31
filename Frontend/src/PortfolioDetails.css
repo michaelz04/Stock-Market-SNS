@@ -1,0 +1,40 @@
+.back {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    background-color:darkgrey;
+    border-radius: 10px;
+    width: 200px;
+    height: 50px;
+    cursor: pointer;
+    color: black;
+}
+
+.input {
+    width: 300px;
+}
+
+.input-container {
+    display: flex;
+    gap: 20px;
+}
+
+.input-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    background-color:darkgrey;
+    border-radius: 10px;
+    width: 100px;
+    height: 50px;
+    cursor: pointer;
+    color: black;
+}
+
+.shares-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}

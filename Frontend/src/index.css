@@ -13,6 +13,8 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1{
-  color: #242424;
+h1 {
+  color: whitesmoke;
+  display: flex;
+  justify-content: center;
 }

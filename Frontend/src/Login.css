@@ -3,7 +3,6 @@
     flex-direction: column;
     margin: auto;
     margin-top: 100px;
-    background: darkgray;
     width: 600px;
     border-radius: 10px;
 
@@ -48,15 +47,16 @@
     justify-content: center;
     align-items: center;
     margin: auto;
-    background-color:#242424;
+    background: darkgray;
     border-radius: 10px;
     width: 100px;
     height: 30px;
     cursor: pointer;
+    color: black;
 }
 
 .error p{
     display: flex;
     justify-self: center;
-    color: black;
+    color:white;
 }

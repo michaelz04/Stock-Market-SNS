@@ -1,8 +1,7 @@
 .body {
     display: flex;
     flex-direction: column;
-    margin: 0px 200px;
-    justify-self: center;
+    align-items: center;
     gap: 20px;
 }
 
@@ -23,10 +22,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 20px auto;
+    margin: 20px 20px;
     background-color:lightgray;
     border-radius: 10px;
-    width: 300px;
+    width: 250px;
     height: 100px;
     cursor: pointer;
     color: black;
@@ -35,6 +34,33 @@
 .portfolio-center {
     display: flex;
     flex-direction: column;
+    justify-self: center;
+}  
+
+.error {
+    display: flex;
+    flex-direction: column;
     justify-items: center;
     align-items: center;
+}
+
+.delete-portfolio {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    background-color:darkgrey;
+    border-radius: 10px;
+    width: 100px;
+    height: 50px;
+    cursor: pointer;
+    color: black;
+}
+
+.portfolio-container {
+    display: flex;
+}
+
+.input {
+    width: 300px;
 }
