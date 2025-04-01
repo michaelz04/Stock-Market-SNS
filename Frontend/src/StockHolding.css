@@ -1,0 +1,22 @@
+.stock-container {
+    display: flex;
+}
+
+.stock {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 20px;
+    background-color:lightgray;
+    border-radius: 10px;
+    width: 300px;
+    height: 150px;
+    cursor: pointer;
+    color: black;
+}
+
+.stock-center {
+    display: flex;
+    flex-direction: column;
+    justify-self: center;
+}  

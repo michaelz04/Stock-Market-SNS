@@ -130,7 +130,7 @@ function Portfolio() {
         ) : (
           <PortfolioDetails
             portfolioId={selectedPortfolio}
-            onBack={() => setSelectedPortfolio(null)}
+            onBack={() => {setSelectedPortfolio(null); setRefresh((prev) => !prev);}}
             cash={cash}
             setCash={setCash}
           />
