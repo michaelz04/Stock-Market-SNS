@@ -18,7 +18,7 @@ function CashAccount({ portfolioId }) {
     const fetchPortfolios = async () => {
       try {
         const response = await axios.post(
-          "http://localhost:3001/portfoliodetails",
+          "http://localhost:3001/cashaccount",
           {
             user,
             portfolioId,

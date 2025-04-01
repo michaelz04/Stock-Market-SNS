@@ -15,20 +15,7 @@ app.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // check if user exists in db
-
-    const userExists = await pool.query(
-      "SELECT * FROM users WHERE userId = $1",
-      [username]
-    );
-
-    // user exists
-    if (userExists.rows.length > 0) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
     // insert new user in db
-
     await pool.query("INSERT INTO users (userId, password) VALUES ($1, $2)", [
       username,
       password,
@@ -36,6 +23,7 @@ app.post("/register", async (req, res) => {
 
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
+    // error inserting into db
     console.error(error.message);
   }
 });
@@ -45,22 +33,15 @@ app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // check if user exists
-    const user = await pool.query("SELECT * FROM users WHERE userId = $1", [
-      username,
+    // check if user and password exists
+    const user = await pool.query("SELECT * FROM users WHERE userId = $1 AND password = $2", [
+      username, password
     ]);
 
+    // return fail if user and password don't exist
     if (user.rows.length === 0) {
       return res.status(400).json({ message: "Invalid username or password" });
     }
-
-    // check valid password
-    const validPassword = password == user.rows[0].password;
-
-    if (!validPassword) {
-      return res.status(400).json({ message: "Invalid username or password" });
-    }
-
     return res.status(201).json({ message: "Login success" });
   } catch (error) {
     console.error(error.message);
@@ -83,22 +64,18 @@ app.post("/portfolio", async (req, res) => {
 app.post("/createportfolio", async (req, res) => {
   const { user, portfolioName, cash } = req.body;
 
-  // check if userId and portfolioId is not in db
-  const exists = await pool.query(
-    "SELECT * FROM portfolio WHERE userId = $1 AND portfolioId = $2",
-    [user, portfolioName]
-  );
-
-  if (exists.rows.length > 0) {
-    return res.status(400).json({ message: "Portfolio name exists" });
+  try {
+    await pool.query(
+      "INSERT INTO portfolio (userId, portfolioId, cash) VALUES ($1, $2, $3)",
+      [user, portfolioName, cash]
+    );
+  
+    res.status(201).json({ message: "success" });
+  } catch (error) {
+    console.log(error.message);
+    return res.status(400).json({ message: "error" });
   }
-
-  await pool.query(
-    "INSERT INTO Portfolio (userId, portfolioId, cash) VALUES ($1, $2, $3)",
-    [user, portfolioName, cash]
-  );
-
-  res.status(201).json({ message: "success" });
+  
 });
 
 // delete portfolio
@@ -113,61 +90,287 @@ app.post("/deleteportfolio", async (req, res) => {
   res.status(201).json({ message: "success" });
 });
 
-// get portfolio details
-app.post("/portfoliodetails", async (req, res) => {
+// get cash account
+app.post("/cashaccount", async (req, res) => {
   const { user, portfolioId } = req.body;
 
   // get cash
   const cash = await pool.query(
-    "SELECT cash FROM portfolio WHERE userid = $1 and portfolioid = $2;",
+    "SELECT cash FROM portfolio WHERE userid = $1 AND portfolioid = $2;",
+    [user, portfolioId]
+  );
+
+  // get cash account history
+  const cashHistory = await pool.query(
+    "SELECT transact, amount FROM portfoliotransaction WHERE userid = $1 AND portfolioid = $2;",
+    [user, portfolioId]
+  );
+
+  res.status(201).json({ message: "success", cash: cash.rows, cashHistory: cashHistory.rows});
+});
+
+// get stock holdings
+app.post("/stockholdings", async (req, res) => {
+  const { user, portfolioId } = req.body;
+
+  // get cash
+  const cash = await pool.query(
+    "SELECT cash FROM portfolio WHERE userid = $1 AND portfolioid = $2;",
     [user, portfolioId]
   );
 
   // get stocks
   const stocks = await pool.query(
-    "SELECT code, noshares FROM portfoliostock WHERE userid = $1 and portfolioid = $2;",
+    "WITH RankedStock AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY code ORDER BY timestamp DESC) AS row_num FROM stock) \
+    SELECT close, portfoliostock.code, noshares, close * noshares as totalvalue FROM portfoliostock INNER JOIN rankedstock ON portfoliostock.code = rankedstock.code \
+    WHERE row_num = 1 AND userid = $1 AND portfolioid = $2;",
     [user, portfolioId]
   );
-  res.status(201).json({ message: "success", cash: cash.rows, stocks: stocks.rows});
+
+  // get portfolio market value
+  const portfolioValue = await pool.query(
+    "WITH RankedStock AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY code ORDER BY timestamp DESC) AS row_num FROM stock), PortfolioValues AS \
+    (SELECT close, portfoliostock.code, noshares, close * noshares as totalvalue FROM portfoliostock INNER JOIN rankedstock ON portfoliostock.code = rankedstock.code \
+    WHERE row_num = 1 AND userid = $1 AND portfolioid = $2) \
+    SELECT SUM(totalvalue) AS portfoliovalue FROM portfoliovalues;",
+    [user, portfolioId]
+  );
+
+  // get stock transaction history
+  const stockHistory = await pool.query(
+    "SELECT code, transact, noshares FROM stocktransaction WHERE userid = $1 AND portfolioid = $2;",
+    [user, portfolioId]
+  );
+
+  res.status(201).json({ message: "success", cash: cash.rows, stocks: stocks.rows, stockHistory: stockHistory.rows, portfolioValue: portfolioValue.rows});
 });
 
 // deposit in portfolio
 app.post("/portfoliodeposit", async (req, res) => {
   const { user, portfolioId, deposit } = req.body;
 
+  if (deposit < 0){
+    return res.status(400).json({ message: "Error" });
+  }
   // deposit
-  await pool.query(
-    "UPDATE portfolio SET cash = cash + $3 WHERE userid = $1 AND portfolioid = $2;",
-    [user, portfolioId, deposit]
-  );
-
-  res.status(201).json({ message: "success"});
+  try {
+    await pool.query(
+      "UPDATE portfolio SET cash = cash + $3 WHERE userid = $1 AND portfolioid = $2;",
+      [user, portfolioId, deposit]
+    );
+    
+    await pool.query(
+      "INSERT INTO portfoliotransaction (userid, portfolioid, transact, amount) VALUES ($1, $2, 'deposit', $3)",
+      [user, portfolioId, deposit]
+    );
+    res.status(201).json({ message: "success"});
+  } catch (error) {
+    res.status(401).json({ message: "fail"});
+  }
+  
 });
 
 // withdraw from portfolio
 app.post("/portfoliowithdraw", async (req, res) => {
   const { user, portfolioId, withdraw } = req.body;
 
+  if (withdraw < 0){
+    return res.status(400).json({ message: "Error" });
+  }
   // withdraw
-  await pool.query(
-    "UPDATE portfolio SET cash = cash - $3 WHERE userid = $1 AND portfolioid = $2;",
-    [user, portfolioId, withdraw]
-  );
+  try {
+    await pool.query(
+      "UPDATE portfolio SET cash = cash - $3 WHERE userid = $1 AND portfolioid = $2;",
+      [user, portfolioId, withdraw]
+    );
 
-  res.status(201).json({ message: "success"});
+    await pool.query(
+      "INSERT INTO portfoliotransaction (userid, portfolioid, transact, amount) VALUES ($1, $2, 'withdraw', $3)",
+      [user, portfolioId, withdraw]
+    );
+  
+    res.status(201).json({ message: "success"});
+  } catch (error) {
+    res.status(401).json({ message: "fail"});
+  }
+  
+});
+
+// transfer from portfolio
+app.post("/portfoliotransfer", async (req, res) => {
+  const { user, portfolioId, transferAmount, transferPortfolio, } = req.body;
+
+  if (transferAmount < 0 || portfolioId == transferPortfolio){
+    return res.status(400).json({ message: "Error" });
+  }
+  
+  // check if transferportfolio exists under user's portfolios
+  const exists = await pool.query("SELECT * FROM portfolio WHERE userId = $1 AND portfolioid = $2", [
+    user, transferPortfolio
+  ]);
+
+  // return fail if user doesn't have transferportfolio
+  if (exists.rows.length === 0) {
+    return res.status(400).json({ message: "fail" });
+  }
+
+  // transfer
+  try {  
+    // remove funds from transferportfolio
+    await pool.query(
+      "UPDATE portfolio SET cash = cash - $3 WHERE userid = $1 AND portfolioid = $2;",
+      [user, transferPortfolio, transferAmount]
+    );
+
+    // add funds to portfolioid
+    await pool.query(
+      "UPDATE portfolio SET cash = cash + $3 WHERE userid = $1 AND portfolioid = $2;",
+      [user, portfolioId, transferAmount]
+    );
+
+    await pool.query(
+      "INSERT INTO portfoliotransaction (userid, portfolioid, transact, amount) VALUES ($1, $2, $3, $4)",
+      [user, transferPortfolio, `transfer to ${portfolioId}`, transferAmount]
+    );
+
+    await pool.query(
+      "INSERT INTO portfoliotransaction (userid, portfolioid, transact, amount) VALUES ($1, $2, $3, $4)",
+      [user, portfolioId, `transfer from ${transferPortfolio}`, transferAmount]
+    );
+  
+    res.status(201).json({ message: "success"});
+  } catch (error) {
+    console.log(error);
+    res.status(401).json({ message: "fail"});
+  }
+  
 });
 
 // buy stock
 app.post("/buystock", async (req, res) => {
-  const { user, portfolioId, code } = req.body;
+  const { user, portfolioId, buyCode, buyShares } = req.body;
 
-  // buy
-  await pool.query(
-    "INSERT INTO ;",
-    [user, portfolioId, withdraw]
-  );
+  if (buyShares <= 0){
+    return res.status(400).json({ message: "Error" });
+  }
+  try {
+    // get stock price
+    const price = await pool.query(
+      "SELECT close FROM stock WHERE code = $1 ORDER BY timestamp DESC LIMIT 1;",
+      [buyCode]
+    ); 
 
-  res.status(201).json({ message: "success"});
+    const { close } = price.rows[0];
+
+    // remove total amount from cash
+    await pool.query(
+      "UPDATE portfolio SET cash = cash - ($3::numeric * $4::numeric) WHERE userid = $1 AND portfolioid = $2;",
+      [user, portfolioId, close, buyShares]
+    );
+
+    // check if portfolio already contains stock
+    const exists = await pool.query("SELECT * FROM portfoliostock WHERE userId = $1 AND portfolioid = $2 AND code = $3", [
+      user, portfolioId, buyCode
+    ]);
+  
+    // return fail if user doesn't have transferportfolio
+    if (exists.rows.length === 0) {
+      // insert code and noshares
+      await pool.query(
+        "INSERT INTO portfoliostock (userid, portfolioid, code, noshares) VALUES ($1, $2, $3, $4);",
+        [user, portfolioId, buyCode, buyShares]
+      );
+    } else {
+      // update code and no shares
+      await pool.query(
+        "UPDATE portfoliostock SET noshares = noshares + $4 WHERE userid = $1 AND portfolioid = $2 AND code = $3;",
+        [user, portfolioId, buyCode, buyShares]
+      );
+    }
+  
+    // insert to stock transaction
+    await pool.query(
+      "INSERT INTO stocktransaction (userid, portfolioid, code, transact, noshares) VALUES ($1, $2, $3, 'buy', $4);",
+      [user, portfolioId, buyCode, buyShares]
+    );
+
+    res.status(201).json({ message: "success"});
+  } catch (error) {
+    console.log(error);
+    res.status(401).json({ message: "fail"});
+  }
+  
+});
+
+// sell stock
+app.post("/sellstock", async (req, res) => {
+  const { user, portfolioId, sellCode, sellShares } = req.body;
+
+  if (sellShares <= 0){
+    return res.status(400).json({ message: "Error" });
+  }
+  try {
+    // get stock price
+    const price = await pool.query(
+      "SELECT close FROM stock WHERE code = $1 ORDER BY timestamp DESC LIMIT 1;",
+      [sellCode]
+    ); 
+
+    const { close } = price.rows[0];
+
+    // remove shares from portfolio
+    await pool.query("UPDATE portfoliostock SET noshares = noshares - $4 WHERE userid = $1 AND portfolioid = $2 AND code = $3;",
+      [user, portfolioId, sellCode, sellShares]
+    );
+
+    // get number of shares after removal
+    const amount = await pool.query("SELECT noshares FROM portfoliostock WHERE userid = $1 AND portfolioid = $2 AND code = $3;",
+      [user, portfolioId, sellCode]
+    );
+
+    // delete row if number of shares is 0
+    if (amount.rows[0].noshares == 0){
+      await pool.query("DELETE FROM portfoliostock WHERE userid = $1 AND portfolioid = $2 AND code = $3",
+        [user, portfolioId, sellCode]
+      );
+    }
+
+    // add total amount to cash
+    await pool.query(
+      "UPDATE portfolio SET cash = cash + ($3::numeric * $4::numeric) WHERE userid = $1 AND portfolioid = $2;",
+      [user, portfolioId, close, sellShares]
+    );
+
+    // insert to stock transaction
+    await pool.query(
+      "INSERT INTO stocktransaction (userid, portfolioid, code, transact, noshares) VALUES ($1, $2, $3, 'sell', $4);",
+      [user, portfolioId, sellCode, sellShares]
+    );
+
+    res.status(201).json({ message: "success"});
+  } catch (error) {
+    console.log(error);
+    res.status(401).json({ message: "fail"});
+  }
+  
+});
+
+// add stock
+app.post("/addstock", async (req, res) => {
+  const { addCode, timestamp, open, high, low, close, volume } = req.body;
+
+  try {
+    await pool.query(
+      "INSERT INTO stock (code, timestamp, open, high, low, close, volume) VALUES ($1, $2, $3, $4, $5, $6, $7);",
+      [addCode, timestamp, open, high, low, close, volume]
+    );
+
+    res.status(201).json({ message: "success"});
+  } catch (error) {
+    console.log(error);
+    res.status(401).json({ message: "fail"});
+  }
+  
 });
 
 app.listen(port, () => {
