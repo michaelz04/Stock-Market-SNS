@@ -18,6 +18,8 @@ function Stocklist() {
     const [newStockShares, setNewStockShares] = useState(1);
     const [sellAmount, setSellAmount] = useState({});
 
+    const [stocklistValue, setStocklistValue] = useState(0);
+
     // Fetch stocklists when component mounts or user changes
     useEffect(() => {
         if (user) {
@@ -33,6 +35,31 @@ function Stocklist() {
             setStocksInList([]);
         }
     }, [selectedStocklist, user]);
+
+    //Total value of a stock changes
+    useEffect(() => {
+        const calculateStocklistValue = async () => {
+            if (!selectedStocklist) {
+                setStocklistValue(0);
+                return;
+            }
+
+            try {
+                const response = await axios.get(`${API_BASE_URL}/stocklist-value`, {
+                    params: { 
+                        userId: user, 
+                        stocklistid: selectedStocklist 
+                    }
+                });
+                setStocklistValue(response.data.stocklistValue);
+            } catch (err) {
+                console.error("Error calculating stocklist value:", err);
+                setStocklistValue(0);
+            }
+        };
+
+        calculateStocklistValue();
+    }, [selectedStocklist, user, stocksInList]); // Re-run when these change
 
     const fetchStocklists = async () => {
         setLoading(true);
@@ -164,7 +191,14 @@ function Stocklist() {
             <h2>Hello {user}</h2>
             
             <div className="portfolio-selector">
-                <h3>Select Portfolio</h3>
+                <div className="selector-header">
+                    <h3>Select Portfolio</h3>
+                    {selectedStocklist && (
+                        <div className="stocklist-value-display">
+                            Current Value: ${stocklistValue}
+                        </div>
+                    )}
+                </div>
                 <select
                     value={selectedStocklist || ""}
                     onChange={(e) => setSelectedStocklist(Number(e.target.value))}
@@ -177,7 +211,7 @@ function Stocklist() {
                     ))}
                 </select>
             </div>
-
+    
             <div className="create-stocklist">
                 <h3>Create New Portfolio</h3>
                 <select 
@@ -204,7 +238,12 @@ function Stocklist() {
             
             {selectedStocklist && (
                 <div className="portfolio-contents">
-                    <h3>Portfolio #{selectedStocklist} Contents</h3>
+                    <div className="portfolio-header">
+                        <h3>Portfolio #{selectedStocklist} Contents</h3>
+                        <div className="stocklist-value">
+                            Total Value: ${stocklistValue}
+                        </div>
+                    </div>
                     
                     <div className="add-stock">
                         <input

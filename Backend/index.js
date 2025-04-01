@@ -578,3 +578,40 @@ app.delete("/stockliststock", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+app.get("/stocklist-value", async (req, res) => {
+  const { userId, stocklistid } = req.query;
+
+  try {
+    // Get all stocks in the stocklist with shares
+    const stocklistStocks = await pool.query(
+      "SELECT code, noShares FROM stockliststock WHERE userId = $1 AND stocklistid = $2",
+      [userId, stocklistid]
+    );
+
+    if (stocklistStocks.rows.length === 0) {
+      return res.json({ stocklistValue: 0 });
+    }
+
+    // Calculate value for each stock and sum
+    let stocklistValue = 0;
+    for (const stock of stocklistStocks.rows) {
+      const latestPrice = await pool.query(
+        `SELECT close FROM stock 
+         WHERE code = $1 
+         ORDER BY timestamp DESC 
+         LIMIT 1`,
+        [stock.code]
+      );
+      
+      if (latestPrice.rows.length > 0) {
+        stocklistValue += latestPrice.rows[0].close * stock.noshares;
+      }
+    }
+
+    res.json({ stocklistValue: stocklistValue.toFixed(2) });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
