@@ -398,3 +398,183 @@ app.get("/all-users", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Get all stocklists for a user
+app.get("/stocklists", async (req, res) => {
+  const { userId } = req.query;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM stocklist WHERE userId = $1",
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Create a new stocklist
+app.post("/stocklists", async (req, res) => {
+  const { userId, visibility } = req.body;
+
+  try {
+    // Get the next available stocklistid
+    const maxIdResult = await pool.query(
+      "SELECT COALESCE(MAX(stocklistid), 0) + 1 AS next_id FROM stocklist"
+    );
+    const nextId = maxIdResult.rows[0].next_id;
+
+    await pool.query(
+      "INSERT INTO stocklist (userId, stocklistid, visibility) VALUES ($1, $2, $3)",
+      [userId, nextId, visibility]
+    );
+
+    res.status(201).json({ 
+      message: "Stocklist created successfully",
+      stocklistid: nextId  // Changed to lowercase
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Delete a stocklist
+app.delete("/stocklists", async (req, res) => {
+  const { userId, stocklistid } = req.body;  // Changed to lowercase
+
+  try {
+    // Verify the stocklist belongs to the user
+    const verifyResult = await pool.query(
+      "SELECT * FROM stocklist WHERE userId = $1 AND stocklistid = $2",
+      [userId, stocklistid]  // Changed to lowercase
+    );
+
+    if (verifyResult.rows.length === 0) {
+      return res.status(404).json({ error: "Stocklist not found or not owned by user" });
+    }
+
+    // Delete the stocklist
+    await pool.query(
+      "DELETE FROM stocklist WHERE stocklistid = $1",
+      [stocklistid]  
+    );
+
+    res.json({ message: "Stocklist deleted successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/stockliststock", async (req, res) => {
+  const { userId, stocklistid } = req.query;
+
+  try {
+    const result = await pool.query(
+      "SELECT code, noShares FROM stockliststock WHERE userId = $1 AND stocklistid = $2",
+      [userId, stocklistid]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/stockliststock", async (req, res) => {
+  const { userId, stocklistid, code, noShares } = req.body;
+
+  try {
+    // Check if stock exists in S&P 500 data
+    const stockExists = await pool.query(
+      "SELECT 1 FROM stock WHERE code = $1 LIMIT 1",
+      [code]
+    );
+    if (stockExists.rows.length === 0) {
+      return res.status(400).json({ error: "Invalid stock code" });
+    }
+
+    // Check if stock already exists in the stocklist
+    const existingStock = await pool.query(
+      "SELECT noShares FROM stockliststock WHERE userId = $1 AND stocklistid = $2 AND code = $3",
+      [userId, stocklistid, code]
+    );
+
+    if (existingStock.rows.length > 0) {
+      // Update existing shares
+      await pool.query(
+        "UPDATE stockliststock SET noShares = noShares + $1 WHERE userId = $2 AND stocklistid = $3 AND code = $4",
+        [noShares, userId, stocklistid, code]
+      );
+    } else {
+      // Add new stock
+      await pool.query(
+        "INSERT INTO stockliststock (userId, stocklistid, code, noShares) VALUES ($1, $2, $3, $4)",
+        [userId, stocklistid, code, noShares]
+      );
+    }
+
+    res.status(200).json({ message: "Stock added/updated successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.put("/stockliststock", async (req, res) => {
+  const { userId, stocklistid, code, sharesToSell } = req.body;
+
+  try {
+    // Check current shares
+    const currentShares = await pool.query(
+      "SELECT noShares FROM stockliststock WHERE userId = $1 AND stocklistid = $2 AND code = $3",
+      [userId, stocklistid, code]
+    );
+
+    if (currentShares.rows.length === 0) {
+      return res.status(404).json({ error: "Stock not found in this stocklist" });
+    }
+
+    const currentNoShares = currentShares.rows[0].noshares;
+    if (sharesToSell > currentNoShares) {
+      return res.status(400).json({ error: "Not enough shares to sell" });
+    }
+
+    if (sharesToSell === currentNoShares) {
+      // Delete if selling all shares
+      await pool.query(
+        "DELETE FROM stockliststock WHERE userId = $1 AND stocklistid = $2 AND code = $3",
+        [userId, stocklistid, code]
+      );
+    } else {
+      // Update shares
+      await pool.query(
+        "UPDATE stockliststock SET noShares = noShares - $1 WHERE userId = $2 AND stocklistid = $3 AND code = $4",
+        [sharesToSell, userId, stocklistid, code]
+      );
+    }
+
+    res.json({ message: "Stock sold successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/stockliststock", async (req, res) => {
+  const { userId, stocklistid, code } = req.body;
+
+  try {
+    await pool.query(
+      "DELETE FROM stockliststock WHERE userId = $1 AND stocklistid = $2 AND code = $3",
+      [userId, stocklistid, code]
+    );
+    res.json({ message: "Stock deleted successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
