@@ -6,19 +6,19 @@ const API_BASE_URL = 'http://localhost:3001';
 
 function Stocklist() {
     const user = localStorage.getItem("user");
-    const [stocklists, setStocklists] = useState([]);
-    const [selectedStocklist, setSelectedStocklist] = useState(null);
-    const [newStocklistVisibility, setNewStocklistVisibility] = useState("private");
-    const [stocklistToDelete, setStocklistToDelete] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [stocklists, setStocklists] = useState([]); //All stocklists that belong to user
+    const [selectedStocklist, setSelectedStocklist] = useState(null); //Specific stocklist selected to the user
+    const [newStocklistVisibility, setNewStocklistVisibility] = useState("private"); //Not super important but controls the dropdown for "private, public, friend"
+    const [stocklistToDelete, setStocklistToDelete] = useState(""); //The user input for deleting a stock
+    const [loading, setLoading] = useState(false); // Can comment out, but might need if some queries take long
+    const [error, setError] = useState(""); //Any error message
 
-    const [stocksInList, setStocksInList] = useState([]);
-    const [newStockCode, setNewStockCode] = useState("");
-    const [newStockShares, setNewStockShares] = useState(1);
-    const [sellAmount, setSellAmount] = useState({});
+    const [stocksInList, setStocksInList] = useState([]); //All stocks selected within a stoocklist
+    const [newStockCode, setNewStockCode] = useState(""); //user input for stock that wants to be bought
+    const [newStockShares, setNewStockShares] = useState(1); //user input for noshares that want to be bought for the stock above
+    const [sellAmount, setSellAmount] = useState({}); //user input for deleting a specific stock in a specific stocklist
 
-    const [stocklistValue, setStocklistValue] = useState(0);
+    const [stocklistValue, setStocklistValue] = useState(0); //Total value for a specific stocklist
 
     // Fetch stocklists when component mounts or user changes
     useEffect(() => {
