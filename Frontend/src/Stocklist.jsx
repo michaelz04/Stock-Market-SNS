@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './Stocklist.css'; // CSS import
 
 const API_BASE_URL = 'http://localhost:3001';
 
 function Stocklist() {
+    
     const user = localStorage.getItem("user");
     const [stocklists, setStocklists] = useState([]); //All stocklists that belong to user
     const [selectedStocklist, setSelectedStocklist] = useState(null); //Specific stocklist selected to the user
@@ -20,12 +22,25 @@ function Stocklist() {
 
     const [stocklistValue, setStocklistValue] = useState(0); //Total value for a specific stocklist
 
-    // Fetch stocklists when component mounts or user changes
+    const navigate = useNavigate();
+    const location = useLocation();
+    // Fetch stocklists when component mounts or user changes but there might be a return choice from HistoricalStock.jsx
     useEffect(() => {
         if (user) {
             fetchStocklists();
+            // Check for selected stocklist in navigation state
+            if (location.state?.selectedStocklist) {
+                setSelectedStocklist(location.state.selectedStocklist);
+            }
         }
-    }, [user]);
+    }, [user, location.state]);
+
+    // Fetch stocklists when component mounts or user changes
+    // useEffect(() => {
+    //     if (user) {
+    //         fetchStocklists();
+    //     }
+    // }, [user]);
 
     // Fetch stocks when a stocklist is selected
     useEffect(() => {
@@ -268,39 +283,46 @@ function Stocklist() {
                         <ul className="stock-list">
                             {stocksInList.map(stock => (
                                 <li key={stock.code} className="stock-item">
-                                    <div className="stock-info">
-                                        <span className="stock-code">{stock.code}</span>
-                                        <span className="stock-shares">{stock.noshares} shares</span>
-                                    </div>
-                                    <div className="stock-actions">
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max={stock.noShares}
-                                            value={sellAmount[stock.code] || ""}
-                                            onChange={(e) => setSellAmount({
-                                                ...sellAmount,
-                                                [stock.code]: Number(e.target.value)
-                                            })}
-                                            placeholder="Shares to sell"
-                                            className="sell-input"
-                                        />
-                                        <button 
-                                            onClick={() => handleSellStock(stock.code)}
-                                            className="sell-btn"
-                                        >
-                                            Sell
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteStock(stock.code)}
-                                            className="delete-btn"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
+                                <div className="stock-info">
+                                    <span className="stock-code">{stock.code}</span>
+                                    <span className="stock-shares">{stock.noshares} shares</span>
+                                </div>
+                                <div className="stock-actions">
+                                    <input
+                                    type="number"
+                                    min="1"
+                                    max={stock.noShares}
+                                    value={sellAmount[stock.code] || ""}
+                                    onChange={(e) => setSellAmount({
+                                        ...sellAmount,
+                                        [stock.code]: Number(e.target.value)
+                                    })}
+                                    placeholder="Shares to sell"
+                                    className="sell-input"
+                                    />
+                                    <button 
+                                    onClick={() => handleSellStock(stock.code)}
+                                    className="sell-btn"
+                                    >
+                                    Sell
+                                    </button>
+                                    <button 
+                                    onClick={() => handleDeleteStock(stock.code)}
+                                    className="delete-btn"
+                                    >
+                                    Delete
+                                    </button>
+                                    {/* Add this button for historical data */}
+                                    <button
+                                    onClick={() => navigate(`/historical/${stock.code}`, { state: { stocklistid: selectedStocklist } })}
+                                    className="history-btn"
+                                    >
+                                    View History
+                                    </button>
+                                </div>
                                 </li>
                             ))}
-                        </ul>
+                            </ul>
                     )}
                 </div>
             )}

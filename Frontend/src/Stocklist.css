@@ -176,3 +176,25 @@ button:hover {
     text-align: center;
     padding: 20px;
 }
+
+.history-btn {
+    background-color: #17a2b8;
+    color: white;
+    padding: 8px 12px;
+    margin-left: 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .history-btn:hover {
+    background-color: #138496;
+  }
+  
+  /* Adjust the stock-actions container if needed */
+  .stock-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Adds consistent spacing between buttons */
+  }

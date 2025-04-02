@@ -615,3 +615,29 @@ app.get("/stocklist-value", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+app.get("/stock-history", async (req, res) => {
+  const { code, start, end } = req.query;
+  
+  try {
+    const result = await pool.query(
+      `SELECT timestamp, close 
+       FROM stock 
+       WHERE code = $1 
+       AND timestamp BETWEEN $2 AND $3 
+       ORDER BY timestamp`,
+      [code, start, end]
+    );
+    
+    // Format dates to YYYY-MM-DD explicitly
+    const formattedData = result.rows.map(row => ({
+      ...row,
+      timestamp: row.timestamp.toISOString().split('T')[0] 
+    }));
+    
+    res.json(formattedData);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
