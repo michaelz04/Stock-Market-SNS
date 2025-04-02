@@ -121,20 +121,21 @@ app.post("/stockholdings", async (req, res) => {
 
   // get stocks
   const stocks = await pool.query(
-    "WITH RankedStock AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY code ORDER BY timestamp DESC) AS row_num FROM stock) \
-    SELECT close, portfoliostock.code, noshares, close * noshares as totalvalue FROM portfoliostock INNER JOIN rankedstock ON portfoliostock.code = rankedstock.code \
-    WHERE row_num = 1 AND userid = $1 AND portfolioid = $2;",
+    "SELECT code, noshares FROM portfoliostock WHERE userid = $1 AND portfolioid = $2;",
     [user, portfolioId]
   );
 
-  // get portfolio market value
-  const portfolioValue = await pool.query(
-    "WITH RankedStock AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY code ORDER BY timestamp DESC) AS row_num FROM stock), PortfolioValues AS \
-    (SELECT close, portfoliostock.code, noshares, close * noshares as totalvalue FROM portfoliostock INNER JOIN rankedstock ON portfoliostock.code = rankedstock.code \
-    WHERE row_num = 1 AND userid = $1 AND portfolioid = $2) \
-    SELECT SUM(totalvalue) AS portfoliovalue FROM portfoliovalues;",
-    [user, portfolioId]
-  );
+  let portfolioValue = 0;
+  for (const stock of stocks.rows){
+    const close = await pool.query(
+      "SELECT close FROM stock WHERE code = $1 ORDER BY timestamp DESC LIMIT 1",
+      [stock.code]
+    );
+
+    stock.close = close.rows[0].close;
+    stock.totalvalue = close.rows[0].close * stock.noshares;
+    portfolioValue += stock.totalvalue;
+  }
 
   // get stock transaction history
   const stockHistory = await pool.query(
@@ -142,7 +143,7 @@ app.post("/stockholdings", async (req, res) => {
     [user, portfolioId]
   );
 
-  res.status(201).json({ message: "success", cash: cash.rows, stocks: stocks.rows, stockHistory: stockHistory.rows, portfolioValue: portfolioValue.rows});
+  res.status(201).json({ message: "success", cash: cash.rows, stocks: stocks.rows, stockHistory: stockHistory.rows, portfolioValue: portfolioValue});
 });
 
 // deposit in portfolio
