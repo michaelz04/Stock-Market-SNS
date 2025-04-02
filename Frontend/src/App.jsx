@@ -11,6 +11,7 @@ import Portfolio from "./Portfolio";
 import Stocklist from "./Stocklist";
 import Friend from "./Friend";
 import Navbar from "./Navbar";
+import HistoricalStock from "./HistoricalStock";
 
 export const UserContext = createContext();
 
@@ -32,6 +33,7 @@ function App() {
 
 function AppContent() {
   const location = useLocation();
+  //const navigate = useNavigate();
 
   return (
     <>
@@ -42,6 +44,7 @@ function AppContent() {
         <Route path="/portfolios" element={<Portfolio />} />
         <Route path="/stocklists" element={<Stocklist />} />
         <Route path="/friends" element={<Friend />} />
+        <Route path="/historical/:stockCode" element={<HistoricalStock />} />
       </Routes>
     </>
   );
