@@ -1111,6 +1111,7 @@ app.post("/unshare-stocklist", async (req, res) => {
   }
 });
 
+//Fetches stocklists owned by the user that have 'friend' visibility (can be shared).
 app.get("/stocklists-shareable", async (req, res) => {
   const { userId } = req.query;
 
@@ -1148,7 +1149,7 @@ app.get("/stocklist-shared-users", async (req, res) => {
 
 //For Public Stocklist Stuff
 
-
+//Fetches the user's own public stocklists with embedded review data.
 // Get user's public stocklists with reviews
 app.get("/stocklists-public", async (req, res) => {
   const { userId } = req.query;
@@ -1184,6 +1185,7 @@ app.get("/stocklists-public-others", async (req, res) => {
   }
 });
 
+//Gets all reviews written by the current user.
 // Get user's existing reviews
 app.get("/user-reviews", async (req, res) => {
   const { userId } = req.query;
@@ -1208,6 +1210,7 @@ app.post("/reviews", async (req, res) => {
   
   try {
     // Verify stocklist exists and user has permission
+    //is_shared_with_user returns true iff the user the stocklist is shared to the user.
     const stocklist = await pool.query(
       `SELECT s.userid, s.visibility, 
        EXISTS (
@@ -1297,85 +1300,6 @@ app.delete("/reviews", async (req, res) => {
   }
 });
 
-// // Create/Update Review
-// app.post("/reviews", async (req, res) => {
-//   const { stocklistId, userId, reviewText, reviewId } = req.body;
-  
-//   try {
-//     // Verify stocklist is public and not owned by user
-//     const stocklist = await pool.query(
-//       "SELECT userid, visibility FROM stocklist WHERE stocklistid = $1",
-//       [stocklistId]
-//     );
-    
-//     if (stocklist.rows.length === 0) {
-//       return res.status(404).json({ error: "Stocklist not found" });
-//     }
-    
-//     if (stocklist.rows[0].visibility !== 'public') {
-//       return res.status(403).json({ error: "Only public stocklists can be reviewed" });
-//     }
-    
-//     if (stocklist.rows[0].userid === userId) {
-//       return res.status(403).json({ error: "Cannot review your own stocklist" });
-//     }
-
-//     if (reviewId) {
-//       // Update existing review
-//       await pool.query(
-//         "UPDATE reviews SET review_text = $1 WHERE review_id = $2 AND reviewer_id = $3",
-//         [reviewText, reviewId, userId]
-//       );
-//     } else {
-//       // Create new review
-//       await pool.query(
-//         `INSERT INTO reviews (stocklist_id, reviewer_id, creator_id, review_text)
-//          VALUES ($1, $2, $3, $4)`,
-//         [stocklistId, userId, stocklist.rows[0].userid, reviewText]
-//       );
-//     }
-    
-//     res.json({ message: "Review saved successfully" });
-//   } catch (error) {
-//     console.error(error.message);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// });
-
-// // Delete Review
-// app.delete("/reviews", async (req, res) => {
-//   const { reviewId, currentUserId } = req.body;
-  
-//   try {
-//     // Verify review exists and user has permission
-//     const review = await pool.query(
-//       `SELECT r.reviewer_id, s.userid as creator_id
-//        FROM reviews r
-//        JOIN stocklist s ON r.stocklist_id = s.stocklistid
-//        WHERE r.review_id = $1`,
-//       [reviewId]
-//     );
-    
-//     if (review.rows.length === 0) {
-//       return res.status(404).json({ error: "Review not found" });
-//     }
-    
-//     if (review.rows[0].reviewer_id !== currentUserId && 
-//         review.rows[0].creator_id !== currentUserId) {
-//       return res.status(403).json({ error: "Not authorized to delete this review" });
-//     }
-    
-//     await pool.query(
-//       "DELETE FROM reviews WHERE review_id = $1",
-//       [reviewId]
-//     );
-    
-//     res.json({ message: "Review deleted successfully" });
-//   } catch (error) {
-//     console.error(error.message);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// });
 // Get all reviews for a public stocklist (visible to everyone)
 app.get("/public-stocklist-reviews", async (req, res) => {
   const { stocklistId } = req.query;
@@ -1411,42 +1335,9 @@ app.get("/public-stocklist-reviews", async (req, res) => {
   }
 });
 
-// // Get all reviews for a specific stocklist
-// app.get("/stocklist-reviews", async (req, res) => {
-//   const { stocklistId } = req.query;
-  
-//   try {
-//     // Verify stocklist is public
-//     const stocklist = await pool.query(
-//       "SELECT visibility FROM stocklist WHERE stocklistid = $1",
-//       [stocklistId]
-//     );
-    
-//     if (stocklist.rows.length === 0) {
-//       return res.status(404).json({ error: "Stocklist not found" });
-//     }
-    
-//     if (stocklist.rows[0].visibility !== 'public') {
-//       return res.status(403).json({ error: "Only public stocklist reviews are visible" });
-//     }
-
-//     const result = await pool.query(
-//       `SELECT r.review_id, r.reviewer_id, r.review_text, u.userId as reviewer_name
-//        FROM reviews r
-//        JOIN users u ON r.reviewer_id = u.userId
-//        WHERE r.stocklist_id = $1
-//        ORDER BY r.review_id DESC`,
-//       [stocklistId]
-//     );
-    
-//     res.json(result.rows);
-//   } catch (error) {
-//     console.error(error.message);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// });
 
 // Get all reviews for a specific stocklist
+// Gets all reviews for a specific stocklist (must be of type friend) after verifying access.
 app.get("/stocklist-reviews", async (req, res) => {
   const { stocklistId, userId } = req.query;
   
@@ -1498,7 +1389,7 @@ app.get("/stocklist-reviews", async (req, res) => {
 
 // For sharing stuff
 
-
+//Fetches unique (DISTINCT) stocklists the user has shared with others.
 app.get("/stocklists-shared-by-user", async (req, res) => {
   const { userId } = req.query;
   try {
@@ -1516,6 +1407,7 @@ app.get("/stocklists-shared-by-user", async (req, res) => {
   }
 });
 
+//Fetches stocklists shared  to the current user
 app.get("/stocklists-shared-with-user", async (req, res) => {
   const { userId } = req.query;
   try {
@@ -1532,3 +1424,38 @@ app.get("/stocklists-shared-with-user", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// Get stocklist stock by id (NOT DEPENDENT BY USER like stockliststock)
+app.get("/stockliststock-by-id", async (req, res) => {
+  const { stocklistid } = req.query;
+
+  try {
+    const result = await pool.query(
+      "SELECT code, noShares FROM stockliststock WHERE stocklistid = $1",
+      [stocklistid]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/stock-latest-price", async (req, res) => {
+  const { code } = req.query;
+  
+  try {
+      const result = await pool.query(
+          `SELECT close FROM stock 
+           WHERE code = $1 
+           ORDER BY timestamp DESC 
+           LIMIT 1`,
+          [code]
+      );
+      res.json(result.rows[0] || { close: 0 });
+  } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: "Server error" });
+  }
+});
+

@@ -213,3 +213,26 @@
         width: 100%;
     }
 }
+
+/* Add to Review.css */
+.stocks-list {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+}
+
+.stocks-list ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.stocks-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+
