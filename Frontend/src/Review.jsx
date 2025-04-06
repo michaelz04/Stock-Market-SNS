@@ -381,11 +381,14 @@ function Review() {
         <div className="review-container">
             <div className="tabs">
                 <button 
-                    className={activeTab === 'share' ? 'active' : ''}
-                    onClick={() => setActiveTab('share')}
-                >
-                    Share Stocklists
-                </button>
+              className={activeTab === 'share' ? 'active' : ''}
+              onClick={() => {
+                  setActiveTab('share');
+                  setViewingReviewsFor(null); 
+              }}
+          >
+              Share Stocklists
+          </button>
                 <button 
                     className={activeTab === 'review' ? 'active' : ''}
                     onClick={() => {
@@ -410,60 +413,105 @@ function Review() {
             {success && <div className="success-message">{success}</div>}
         
             {activeTab === 'share' && (
-                <div className="share-tab">
-                    <h3>Share Your Stocklists</h3>
-                    {loading ? (
-                        <p>Loading...</p>
-                    ) : sharableStocklists.length === 0 ? (
-                        <p>You have no stocklists with 'friend' visibility to share.</p>
-                    ) : (
-                        <div className="stocklist-grid">
-                            {sharableStocklists.map(stocklist => (
-                                <div key={`share-${stocklist.stocklistid}`} className="stocklist-card">
-                                    <h4>Stocklist #{stocklist.stocklistid}</h4>
-                                    
-                                    <div className="shared-with-section">
-                                        <strong>Currently Shared With:</strong>
-                                        {sharedUsers[stocklist.stocklistid]?.length > 0 ? (
-                                            <ul className="shared-users-list">
-                                                {sharedUsers[stocklist.stocklistid].map(username => (
-                                                    <li key={`shared-user-${username}`}>{username}</li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p>Not shared with anyone yet</p>
-                                        )}
-                                    </div>
-                                    
-                                    <div className="share-controls">
-                                        <input
-                                            type="text"
-                                            value={shareInputs[stocklist.stocklistid] || ""}
-                                            onChange={(e) => handleInputChange(stocklist.stocklistid, e.target.value)}
-                                            placeholder="Friend's username"
-                                        />
-                                        <div className="share-buttons">
-                                            <button 
-                                                onClick={() => handleShareStocklist(stocklist.stocklistid)}
-                                                className="share-btn"
-                                            >
-                                                Share
-                                            </button>
-                                            <button 
-                                                onClick={() => handleUnshareStocklist(stocklist.stocklistid)}
-                                                className="unshare-btn"
-                                            >
-                                                Unshare
-                                            </button>
-                                        </div>
+    <div className="share-tab">
+        {viewingReviewsFor ? (
+            <div className="reviews-view">
+                <button 
+                    className="back-button"
+                    onClick={() => setViewingReviewsFor(null)}
+                >
+                    ← Back to Shareable Stocklists
+                </button>
+                <h3>Reviews for Stocklist #{viewingReviewsFor}</h3>
+                {loading ? (
+                    <p>Loading reviews...</p>
+                ) : currentReviews.length === 0 ? (
+                    <p>No reviews yet for this stocklist</p>
+                ) : (
+                    <div className="reviews-list">
+                        {currentReviews.map(review => (
+                            <div key={`share-review-${review.review_id}`} className="review-item">
+                                <div className="review-header">
+                                    <span className="reviewer">{review.reviewer_name || review.reviewer_id}</span>
+                                    {(review.reviewer_id === user || 
+                                    sharableStocklists.some(s => s.stocklistid === viewingReviewsFor)) && (
+                                        <button
+                                            onClick={() => handleDeleteReview(review.review_id, viewingReviewsFor)}
+                                            className="delete-review-btn"
+                                        >
+                                            Delete
+                                        </button>
+                                    )}
+                                </div>
+                                <p className="review-text">{review.review_text}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        ) : (
+            <>
+                <h3>Share Your Stocklists</h3>
+                {loading ? (
+                    <p>Loading...</p>
+                ) : sharableStocklists.length === 0 ? (
+                    <p>You have no stocklists with 'friend' visibility to share.</p>
+                ) : (
+                    <div className="stocklist-grid">
+                        {sharableStocklists.map(stocklist => (
+                            <div key={`share-${stocklist.stocklistid}`} className="stocklist-card">
+                                <h4>Stocklist #{stocklist.stocklistid}</h4>
+                                
+                                <div className="shared-with-section">
+                                    <strong>Currently Shared With:</strong>
+                                    {sharedUsers[stocklist.stocklistid]?.length > 0 ? (
+                                        <ul className="shared-users-list">
+                                            {sharedUsers[stocklist.stocklistid].map(username => (
+                                                <li key={`shared-user-${username}`}>{username}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p>Not shared with anyone yet</p>
+                                    )}
+                                </div>
+
+                                <button
+                                    className="view-reviews-btn"
+                                    onClick={() => fetchReviewsForStocklist(stocklist.stocklistid)}
+                                >
+                                    View All Reviews
+                                </button>
+                                
+                                <div className="share-controls">
+                                    <input
+                                        type="text"
+                                        value={shareInputs[stocklist.stocklistid] || ""}
+                                        onChange={(e) => handleInputChange(stocklist.stocklistid, e.target.value)}
+                                        placeholder="Friend's username"
+                                    />
+                                    <div className="share-buttons">
+                                        <button 
+                                            onClick={() => handleShareStocklist(stocklist.stocklistid)}
+                                            className="share-btn"
+                                        >
+                                            Share
+                                        </button>
+                                        <button 
+                                            onClick={() => handleUnshareStocklist(stocklist.stocklistid)}
+                                            className="unshare-btn"
+                                        >
+                                            Unshare
+                                        </button>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-        
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </>
+        )}
+    </div>
+)}
             {activeTab === 'review' && (
                 <div className="public-tab">
                     {viewingReviewsFor ? (

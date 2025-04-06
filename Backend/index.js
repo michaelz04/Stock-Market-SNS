@@ -682,7 +682,19 @@ app.post("/remove-friend", async (req, res) => {
       [friendId, userId]
     );
 
-    res.json({ message: "Friend removed successfully" });
+    // 3. Remove all stocklist shares between these users in both directions
+    await pool.query(
+      `DELETE FROM StockListShare
+       WHERE (userId = $1 AND stocklistid IN (
+         SELECT stocklistid FROM StockList WHERE userId = $2 AND visibility = 'friend'
+       ))
+       OR (userId = $2 AND stocklistid IN (
+         SELECT stocklistid FROM StockList WHERE userId = $1 AND visibility = 'friend'
+       ))`,
+      [userId, friendId]
+    );
+
+    res.json({ message: "Friend removed successfully, stocklist sharing removed as well" });
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ message: "Server error" });
