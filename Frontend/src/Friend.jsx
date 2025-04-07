@@ -26,6 +26,7 @@ function Friend() {
         }
     }, [user]);
 
+
     const fetchAllUsers = async () => {
         try {
           const response = await axios.get(`${API_BASE_URL}/all-users`, {
@@ -168,7 +169,9 @@ function Friend() {
             setMessage(response.data.message);
             // setMessageType("success");
             await fetchPendingRequests();
+            await fetchFriendsList();
         } catch (error) {
+            
             setMessage(error.response?.data?.message || "Error processing request");
             // setMessageType("error");
             console.error(error);
