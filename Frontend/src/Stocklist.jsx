@@ -207,7 +207,7 @@ function Stocklist() {
             
             <div className="portfolio-selector">
                 <div className="selector-header">
-                    <h3>Select Portfolio</h3>
+                    <h3>Select Stocklist</h3>
                     {selectedStocklist && (
                         <div className="stocklist-value-display">
                             Current Value: ${stocklistValue}
@@ -218,17 +218,17 @@ function Stocklist() {
                     value={selectedStocklist || ""}
                     onChange={(e) => setSelectedStocklist(Number(e.target.value))}
                 >
-                    <option value="">-- Select a Portfolio --</option>
+                    <option value="">-- Select a Stocklist --</option>
                     {stocklists.map(list => (
                         <option key={list.stocklistid} value={list.stocklistid}>
-                            Portfolio #{list.stocklistid} ({list.visibility})
+                            Stocklist #{list.stocklistid} ({list.visibility})
                         </option>
                     ))}
                 </select>
             </div>
     
             <div className="create-stocklist">
-                <h3>Create New Portfolio</h3>
+                <h3>Create New Stocklist</h3>
                 <select 
                     value={newStocklistVisibility}
                     onChange={(e) => setNewStocklistVisibility(e.target.value)}
@@ -241,12 +241,12 @@ function Stocklist() {
             </div>
             
             <div className="delete-stocklist">
-                <h3>Delete Portfolio</h3>
+                <h3>Delete Stocklist</h3>
                 <input
                     type="text"
                     value={stocklistToDelete}
                     onChange={(e) => setStocklistToDelete(e.target.value)}
-                    placeholder="Enter portfolio ID to delete"
+                    placeholder="Enter stocklist ID to delete"
                 />
                 <button onClick={handleDeleteStocklist}>Delete</button>
             </div>
@@ -254,7 +254,7 @@ function Stocklist() {
             {selectedStocklist && (
                 <div className="portfolio-contents">
                     <div className="portfolio-header">
-                        <h3>Portfolio #{selectedStocklist} Contents</h3>
+                        <h3>Stocklist #{selectedStocklist} Contents</h3>
                         <div className="stocklist-value">
                             Total Value: ${stocklistValue}
                         </div>
@@ -278,7 +278,7 @@ function Stocklist() {
                     </div>
                     
                     {stocksInList.length === 0 ? (
-                        <p className="empty-portfolio">This portfolio is empty</p>
+                        <p className="empty-portfolio">This Stock is empty</p>
                     ) : (
                         <ul className="stock-list">
                             {stocksInList.map(stock => (
@@ -297,14 +297,14 @@ function Stocklist() {
                                         ...sellAmount,
                                         [stock.code]: Number(e.target.value)
                                     })}
-                                    placeholder="Shares to sell"
+                                    placeholder="Shares to remove"
                                     className="sell-input"
                                     />
                                     <button 
                                     onClick={() => handleSellStock(stock.code)}
                                     className="sell-btn"
                                     >
-                                    Sell
+                                    Remove Shares
                                     </button>
                                     <button 
                                     onClick={() => handleDeleteStock(stock.code)}
@@ -317,7 +317,7 @@ function Stocklist() {
                                     onClick={() => navigate(`/historical/${stock.code}`, { state: { stocklistid: selectedStocklist } })}
                                     className="history-btn"
                                     >
-                                    View History
+                                    Historical/Future Graphs
                                     </button>
                                 </div>
                                 </li>

@@ -374,14 +374,20 @@ app.post("/addstock", async (req, res) => {
   
 });
 
+//To remove FriendCooldown
+setInterval(async () => {
+  try {
+    await pool.query("DELETE FROM FriendCooldown WHERE created_at < NOW() - INTERVAL '5 minutes'");
+    console.log(`Cleaned expired cooldowns`);
+  } catch (err) {
+    console.error('Cleanup error:', err);
+  }
+}, 300000); // 4min 59sec
+
+
 app.listen(port, () => {
   console.log(`App running on port ${port}.`);
 });
-
-
-
-
-
 
 
 
@@ -433,7 +439,6 @@ app.get("/friendship-status", async (req, res) => {
   }
 });
 
-// Send friend request, actually does the work in backend
 app.post("/send-friend-request", async (req, res) => {
   const { senderId, receiverId } = req.body;
   
@@ -452,6 +457,25 @@ app.post("/send-friend-request", async (req, res) => {
     if (receiverExists.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    // Check for active cooldown (must be placed before other checks)
+    const cooldown = await pool.query(
+      `SELECT created_at FROM FriendCooldown 
+       WHERE userA = $1 AND userB = $2
+       AND created_at > NOW() - INTERVAL '30 seconds'`,
+      [senderId, receiverId]
+    );
+
+    if (cooldown.rows.length > 0) {
+      return res.status(400).json({ 
+        message: "You must wait 5 minutes after rejection/removal before sending another request"
+      });
+    }
+    //Remove if exists
+    await pool.query(
+      "DELETE FROM FriendCooldown WHERE userA = $1 AND userB = $2",
+      [senderId, receiverId]
+    );
     
     // Check if already friends
     const alreadyFriends = await pool.query(
@@ -487,7 +511,6 @@ app.post("/send-friend-request", async (req, res) => {
       );
       
       // Create friendship (ensuring user1 < user2)
-      // Somehow needs localeCompare to ensure user1 < user2
       const user1 = senderId.localeCompare(receiverId) < 0 ? senderId : receiverId;
       const user2 = senderId.localeCompare(receiverId) < 0 ? receiverId : senderId;
       
@@ -571,6 +594,14 @@ app.post("/respond-to-request", async (req, res) => {
         [user1, user2]
       );
     }
+
+    if (action === 'decline') {
+      // Rule is UserA can never send friend request to userB
+      await pool.query(
+        "INSERT INTO FriendCooldown (userA, userB) VALUES ($1, $2)",
+        [senderId, receiverId]
+      );
+    }
     
     // Delete the request in either case
     await pool.query(
@@ -645,8 +676,25 @@ app.post("/remove-friend", async (req, res) => {
        WHERE (user1 = $1 AND user2 = $2) OR (user1 = $2 AND user2 = $1)`,
       [userId, friendId]
     );
+    //Make sure to keep the rule UserA cannot send friendrequest to userB
+    await pool.query(
+      "INSERT INTO FriendCooldown (userA, userB) VALUES ($1, $2)",
+      [friendId, userId]
+    );
 
-    res.json({ message: "Friend removed successfully" });
+    // 3. Remove all stocklist shares between these users in both directions
+    await pool.query(
+      `DELETE FROM StockListShare
+       WHERE (userId = $1 AND stocklistid IN (
+         SELECT stocklistid FROM StockList WHERE userId = $2 AND visibility = 'friend'
+       ))
+       OR (userId = $2 AND stocklistid IN (
+         SELECT stocklistid FROM StockList WHERE userId = $1 AND visibility = 'friend'
+       ))`,
+      [userId, friendId]
+    );
+
+    res.json({ message: "Friend removed successfully, stocklist sharing removed as well" });
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ message: "Server error" });
@@ -662,6 +710,18 @@ app.get("/all-users", async (req, res) => {
       [currentUser]
     );
     res.json({ users: users.rows });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/cleanup-cooldowns", async (req, res) => {
+  try {
+    await pool.query(
+      "DELETE FROM FriendCooldown WHERE created_at < NOW() - INTERVAL '5 minutes'"
+    );
+    res.json({ message: "Old cooldowns cleaned up" });
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ message: "Server error" });
@@ -885,6 +945,7 @@ app.get("/stocklist-value", async (req, res) => {
   }
 });
 
+
 app.get("/stock-history", async (req, res) => {
   const { code, start, end } = req.query;
   
@@ -910,3 +971,503 @@ app.get("/stock-history", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+ app.get("/predict-stock", async (req, res) => {
+  const { code, start, days } = req.query;
+
+  try {
+    const result = await pool.query(
+      `SELECT timestamp, close 
+       FROM stock 
+       WHERE code = $1 
+       ORDER BY timestamp`,
+      [code]
+    );
+
+    const rows = result.rows;
+
+    if (!rows.length) {
+      return res.status(404).json({ error: "No data found for stock." });
+    }
+
+    // Validate prediction date is after the latest known date
+    const latestAvailableDate = new Date(rows[rows.length - 1].timestamp);
+    const startDate = new Date(start);
+
+    if (startDate < latestAvailableDate) {
+      return res.status(400).json({
+        error: `Prediction date must be on or after ${latestAvailableDate.toISOString().split('T')[0]}`
+      });
+    }
+
+    // Convert timestamp to a numerical value for regression
+    const x = rows.map(row => new Date(row.timestamp).getTime());
+    const y = rows.map(row => parseFloat(row.close));
+
+    const n = x.length;
+    const xMean = x.reduce((a, b) => a + b, 0) / n;
+    const yMean = y.reduce((a, b) => a + b, 0) / n;
+
+  // Calculate slope using: B1= SSXY/SSXX, B0 = ybar -B1x_bar
+    const SSXY = x.reduce((sum, xi, i) => sum + (xi - xMean) * (y[i] - yMean), 0);
+    const SSXX = x.reduce((sum, xi) => sum + Math.pow(xi - xMean, 2), 0);
+    const B1 = SSXY / SSXX;
+    const B0 = yMean - B1 * xMean;
+
+    // Generate predictions
+    const predictions = [];
+
+    for (let i = 0; i < parseInt(days); i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+
+      const time = date.getTime(); // x-value
+      const predicted = B1 * time + B0; // y = B1x + B0
+
+      predictions.push({
+        timestamp: date.toISOString().split('T')[0],
+        predictedClose: predicted
+      });
+    }
+
+    res.json(predictions);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Prediction server error" });
+  }
+});
+
+
+// Review Stuff
+
+
+
+// Check if two users are friends
+app.get("/check-friendship", async (req, res) => {
+  const { user1, user2 } = req.query;
+
+  try {
+      const result = await pool.query(
+          `SELECT 1 FROM FriendsWith 
+           WHERE (user1 = $1 AND user2 = $2) OR (user1 = $2 AND user2 = $1)`,
+          [user1, user2]
+      );
+
+      res.json({ isFriend: result.rows.length > 0 });
+  } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Share a stocklist with a user
+app.post("/share-stocklist", async (req, res) => {
+  const { stocklistId, userId } = req.body;
+
+  try {
+      // Check if the stocklist exists and is shareable
+      const stocklist = await pool.query(
+          "SELECT userId, visibility FROM stocklist WHERE stocklistid = $1",
+          [stocklistId]
+      );
+
+      if (stocklist.rows.length === 0) {
+          return res.status(404).json({ error: "Stocklist not found" });
+      }
+
+      if (stocklist.rows[0].visibility !== 'friend') {
+          return res.status(400).json({ error: "Only stocklists with 'friend' visibility can be shared" });
+      }
+
+      // Check if already shared
+      const alreadyShared = await pool.query(
+          "SELECT 1 FROM stocklistshare WHERE stocklistid = $1 AND userId = $2",
+          [stocklistId, userId]
+      );
+
+      if (alreadyShared.rows.length > 0) {
+          return res.status(400).json({ error: "Stocklist already shared with this user" });
+      }
+
+      // Share the stocklist
+      await pool.query(
+          "INSERT INTO stocklistshare (stocklistid, userId) VALUES ($1, $2)",
+          [stocklistId, userId]
+      );
+
+      res.json({ message: "Stocklist shared successfully" });
+  } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Unshare a stocklist with a user
+app.post("/unshare-stocklist", async (req, res) => {
+  const { stocklistId, userId } = req.body;
+
+  try {
+      const result = await pool.query(
+          "DELETE FROM stocklistshare WHERE stocklistid = $1 AND userId = $2",
+          [stocklistId, userId]
+      );
+
+      if (result.rowCount === 0) {
+          return res.status(404).json({ error: "Share relationship not found" });
+      }
+
+      res.json({ message: "Stocklist unshared successfully" });
+  } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: "Server error" });
+  }
+});
+
+//Fetches stocklists owned by the user that have 'friend' visibility (can be shared).
+app.get("/stocklists-shareable", async (req, res) => {
+  const { userId } = req.query;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM stocklist WHERE userId = $1 AND visibility = 'friend'",
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get users a stocklist is shared with
+app.get("/stocklist-shared-users", async (req, res) => {
+  const { stocklistId } = req.query;
+
+  try {
+    const result = await pool.query(
+      "SELECT userId FROM stocklistshare WHERE stocklistid = $1",
+      [stocklistId]
+    );
+    res.json(result.rows.map(row => row.userid));
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
+
+
+//For Public Stocklist Stuff
+
+//Fetches the user's own public stocklists with embedded review data.
+// Get user's public stocklists with reviews
+app.get("/stocklists-public", async (req, res) => {
+  const { userId } = req.query;
+  try {
+    const result = await pool.query(
+      `SELECT s.stocklistid, s.userid, 
+       (SELECT json_agg(r) FROM reviews r WHERE r.stocklist_id = s.stocklistid) as reviews
+       FROM stocklist s
+       WHERE s.userid = $1 AND s.visibility = 'public'`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get all other public stocklists
+app.get("/stocklists-public-others", async (req, res) => {
+  const { userId } = req.query;
+  try {
+    const result = await pool.query(
+      `SELECT s.stocklistid, s.userid
+       FROM stocklist s
+       WHERE s.userid != $1 AND s.visibility = 'public'`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+//Gets all reviews written by the current user.
+// Get user's existing reviews
+app.get("/user-reviews", async (req, res) => {
+  const { userId } = req.query;
+  try {
+    const result = await pool.query(
+      `SELECT stocklist_id, review_text, review_id 
+       FROM reviews 
+       WHERE reviewer_id = $1`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+// Create/Update Review - Updated to allow friend-visibility stocklists
+app.post("/reviews", async (req, res) => {
+  const { stocklistId, userId, reviewText, reviewId } = req.body;
+  
+  try {
+    // Verify stocklist exists and user has permission
+    //is_shared_with_user returns true iff the user the stocklist is shared to the user.
+    const stocklist = await pool.query(
+      `SELECT s.userid, s.visibility, 
+       EXISTS (
+         SELECT 1 FROM stocklistshare 
+         WHERE stocklistid = $1 AND userid = $2
+       ) as is_shared_with_user
+       FROM stocklist s
+       WHERE s.stocklistid = $1`,
+      [stocklistId, userId]
+    );
+    
+    if (stocklist.rows.length === 0) {
+      return res.status(404).json({ error: "Stocklist not found" });
+    }
+    
+    const stocklistData = stocklist.rows[0];
+    
+    // Allow review if:
+    // 1. Stocklist is public, OR
+    // 2. Stocklist is friend-visibility AND shared with user
+    if (stocklistData.visibility !== 'public' && 
+        !(stocklistData.visibility === 'friend' && stocklistData.is_shared_with_user)) {
+      return res.status(403).json({ error: "You can only review public stocklists or stocklists shared with you" });
+    }
+    
+    if (stocklistData.userid === userId) {
+      return res.status(403).json({ error: "Cannot review your own stocklist" });
+    }
+
+    if (reviewId) {
+      // Update existing review
+      await pool.query(
+        "UPDATE reviews SET review_text = $1 WHERE review_id = $2 AND reviewer_id = $3",
+        [reviewText, reviewId, userId]
+      );
+    } else {
+      // Create new review
+      await pool.query(
+        `INSERT INTO reviews (stocklist_id, reviewer_id, creator_id, review_text)
+         VALUES ($1, $2, $3, $4)`,
+        [stocklistId, userId, stocklistData.userid, reviewText]
+      );
+    }
+    
+    res.json({ message: "Review saved successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Delete Review - Updated to work with shared stocklists
+app.delete("/reviews", async (req, res) => {
+  const { reviewId, currentUserId } = req.body;
+  
+  try {
+    // Verify review exists and user has permission
+    const review = await pool.query(
+      `SELECT r.reviewer_id, s.userid as creator_id
+       FROM reviews r
+       JOIN stocklist s ON r.stocklist_id = s.stocklistid
+       WHERE r.review_id = $1`,
+      [reviewId]
+    );
+    
+    if (review.rows.length === 0) {
+      return res.status(404).json({ error: "Review not found" });
+    }
+    
+    // Allow delete if:
+    // 1. User is the reviewer, OR
+    // 2. User is the creator of the stocklist
+    if (review.rows[0].reviewer_id !== currentUserId && 
+        review.rows[0].creator_id !== currentUserId) {
+      return res.status(403).json({ error: "Not authorized to delete this review" });
+    }
+    
+    await pool.query(
+      "DELETE FROM reviews WHERE review_id = $1",
+      [reviewId]
+    );
+    
+    res.json({ message: "Review deleted successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get all reviews for a public stocklist (visible to everyone)
+app.get("/public-stocklist-reviews", async (req, res) => {
+  const { stocklistId } = req.query;
+
+  try {
+    // First verify the stocklist is public
+    const stocklist = await pool.query(
+      "SELECT visibility FROM stocklist WHERE stocklistid = $1",
+      [stocklistId]
+    );
+
+    if (stocklist.rows.length === 0) {
+      return res.status(404).json({ error: "Stocklist not found" });
+    }
+
+    if (stocklist.rows[0].visibility !== 'public') {
+      return res.status(403).json({ error: "Only public stocklist reviews are visible" });
+    }
+
+    // Get all reviews for this public stocklist
+    const result = await pool.query(
+      `SELECT r.review_id, r.reviewer_id, r.review_text, u.userId as reviewer_name
+       FROM reviews r
+       JOIN users u ON r.reviewer_id = u.userId
+       WHERE r.stocklist_id = $1`,
+      [stocklistId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+// Get all reviews for a specific stocklist
+// Gets all reviews for a specific stocklist (must be of type friend) after verifying access.
+app.get("/stocklist-reviews", async (req, res) => {
+  const { stocklistId, userId } = req.query;
+  
+  try {
+    // Verify stocklist exists and user has permission
+    const stocklist = await pool.query(
+      `SELECT s.visibility, s.userid as owner_id,
+       EXISTS (
+         SELECT 1 FROM stocklistshare 
+         WHERE stocklistid = $1 AND userid = $2
+       ) as is_shared_with_user
+       FROM stocklist s
+       WHERE s.stocklistid = $1`,
+      [stocklistId, userId]
+    );
+    
+    if (stocklist.rows.length === 0) {
+      return res.status(404).json({ error: "Stocklist not found" });
+    }
+    
+    const stocklistData = stocklist.rows[0];
+    
+    // Allow access if:
+    // 1. Stocklist is public, OR
+    // 2. Stocklist is shared with user (friend visibility), OR
+    // 3. User is the owner of the stocklist
+    if (stocklistData.visibility !== 'public' && 
+        !(stocklistData.visibility === 'friend' && stocklistData.is_shared_with_user) &&
+        stocklistData.owner_id !== userId) {
+      return res.status(403).json({ error: "Not authorized to view these reviews" });
+    }
+
+    const result = await pool.query(
+      `SELECT r.review_id, r.reviewer_id, r.review_text, u.userId as reviewer_name
+       FROM reviews r
+       JOIN users u ON r.reviewer_id = u.userId
+       WHERE r.stocklist_id = $1
+       ORDER BY r.review_id DESC`,
+      [stocklistId]
+    );
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+// For sharing stuff
+
+//Fetches unique (DISTINCT) stocklists the user has shared with others.
+app.get("/stocklists-shared-by-user", async (req, res) => {
+  const { userId } = req.query;
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT s.stocklistid, s.userid as owner_id, s.visibility
+       FROM stocklist s
+       JOIN stocklistshare sh ON s.stocklistid = sh.stocklistid
+       WHERE s.userid = $1 AND s.visibility = 'friend'`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+//Fetches stocklists shared  to the current user
+app.get("/stocklists-shared-with-user", async (req, res) => {
+  const { userId } = req.query;
+  try {
+    const result = await pool.query(
+      `SELECT s.stocklistid, s.userid as owner_id
+       FROM stocklist s
+       JOIN stocklistshare sh ON s.stocklistid = sh.stocklistid
+       WHERE sh.userid = $1 AND s.visibility = 'friend'`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get stocklist stock by id (NOT DEPENDENT BY USER like stockliststock)
+app.get("/stockliststock-by-id", async (req, res) => {
+  const { stocklistid } = req.query;
+
+  try {
+    const result = await pool.query(
+      "SELECT code, noShares FROM stockliststock WHERE stocklistid = $1",
+      [stocklistid]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/stock-latest-price", async (req, res) => {
+  const { code } = req.query;
+  
+  try {
+      const result = await pool.query(
+          `SELECT close FROM stock 
+           WHERE code = $1 
+           ORDER BY timestamp DESC 
+           LIMIT 1`,
+          [code]
+      );
+      res.json(result.rows[0] || { close: 0 });
+  } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: "Server error" });
+  }
+});
+
