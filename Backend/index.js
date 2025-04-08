@@ -208,9 +208,11 @@ app.post("/portfoliostatistics", async (req, res) => {
 
     const codes = stocks.rows.map((row) => row.code);
 
-    if (codes.length < 2) {
-      res.status(201).json({ message: "success", stocks: stocks.rows });
-    }
+    // if (codes.length < 2) {
+    //   console.log("a");
+    //   res.status(201).json({ message: "success", stocks: stocks.rows });
+    //   return;
+    // }
 
     const covResult = await pool.query(`
       WITH pivoted AS (
