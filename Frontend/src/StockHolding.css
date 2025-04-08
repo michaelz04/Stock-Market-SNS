@@ -20,3 +20,8 @@
     flex-direction: column;
     justify-self: center;
 }  
+
+.stocks{
+    display: flex;
+    gap: 50px;
+}

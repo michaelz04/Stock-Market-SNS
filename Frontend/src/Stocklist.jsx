@@ -203,13 +203,13 @@ function Stocklist() {
 
     return (
         <div className='stocklist-container'>
-            <h2>Hello {user}</h2>
+            <h2>Stock Lists</h2>
             
             <div className="portfolio-selector">
                 <div className="selector-header">
-                    <h3>Select Stocklist</h3>
+                    <h3 className='stocklist-h3'>Select Stocklist</h3>
                     {selectedStocklist && (
-                        <div className="stocklist-value-display">
+                        <div className="stocklist-h3">
                             Current Value: ${stocklistValue}
                         </div>
                     )}
@@ -218,7 +218,7 @@ function Stocklist() {
                     value={selectedStocklist || ""}
                     onChange={(e) => setSelectedStocklist(Number(e.target.value))}
                 >
-                    <option value="">-- Select a Stocklist --</option>
+                    <option value="" >-- Select a Stocklist --</option>
                     {stocklists.map(list => (
                         <option key={list.stocklistid} value={list.stocklistid}>
                             Stocklist #{list.stocklistid} ({list.visibility})
@@ -228,7 +228,7 @@ function Stocklist() {
             </div>
     
             <div className="create-stocklist">
-                <h3>Create New Stocklist</h3>
+                <h3 className='stocklist-h3'>Create New Stocklist</h3>
                 <select 
                     value={newStocklistVisibility}
                     onChange={(e) => setNewStocklistVisibility(e.target.value)}
@@ -241,7 +241,7 @@ function Stocklist() {
             </div>
             
             <div className="delete-stocklist">
-                <h3>Delete Stocklist</h3>
+                <h3 className='stocklist-h3'>Delete Stocklist</h3>
                 <input
                     type="text"
                     value={stocklistToDelete}
@@ -254,8 +254,8 @@ function Stocklist() {
             {selectedStocklist && (
                 <div className="portfolio-contents">
                     <div className="portfolio-header">
-                        <h3>Stocklist #{selectedStocklist} Contents</h3>
-                        <div className="stocklist-value">
+                        <h3 className='stocklist-h3 '>Stocklist #{selectedStocklist} Contents</h3>
+                        <div className="stocklist-h3">
                             Total Value: ${stocklistValue}
                         </div>
                     </div>

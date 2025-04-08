@@ -197,7 +197,7 @@ function Friend() {
 
     return (
         <div className='friend-body'>
-            <h2>Hello {user}</h2>
+            <h2>Friends</h2>
             
             <div className="tabs">
                 <button 

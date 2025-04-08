@@ -378,7 +378,9 @@ function Review() {
     };
 
     return (
+        
         <div className="review-container">
+            <h2>Reviews</h2>
             <div className="tabs">
                 <button 
               className={activeTab === 'share' ? 'active' : ''}
@@ -451,7 +453,7 @@ function Review() {
             </div>
         ) : (
             <>
-                <h3>Share Your Stocklists</h3>
+                <h3 className='share-heading'>Share Your Stocklists</h3>
                 {loading ? (
                     <p>Loading...</p>
                 ) : sharableStocklists.length === 0 ? (
@@ -463,7 +465,7 @@ function Review() {
                                 <h4>Stocklist #{stocklist.stocklistid}</h4>
                                 
                                 <div className="shared-with-section">
-                                    <strong>Currently Shared With:</strong>
+                                    <div className='currently-shared'>Currently Shared With:</div>
                                     {sharedUsers[stocklist.stocklistid]?.length > 0 ? (
                                         <ul className="shared-users-list">
                                             {sharedUsers[stocklist.stocklistid].map(username => (
@@ -471,7 +473,7 @@ function Review() {
                                             ))}
                                         </ul>
                                     ) : (
-                                        <p>Not shared with anyone yet</p>
+                                        <div className='currently-shared'>Not shared with anyone yet</div>
                                     )}
                                 </div>
 

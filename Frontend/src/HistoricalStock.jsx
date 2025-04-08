@@ -67,10 +67,10 @@ function HistoricalStock() {
       }
       // Always get origin from location.state if it exists, otherwise default to 'stocklist'
       setOrigin(location.state.origin || 'stocklist');
-      
+
       // Only fetch if we have a stocklistid
       if (location.state.stocklistid) {
-        fetchStocksInPortfolio(location.state.stocklistid);
+        fetchStocksInPortfolio(location.state.stocklistid, location);
       }
     }
   }, [location.state]);
@@ -83,20 +83,27 @@ function HistoricalStock() {
   useEffect(() => {
     if (selectedStocklist) {
       console.log(`Origin changed to: ${origin}, refetching stocks...`);
-      fetchStocksInPortfolio(selectedStocklist);
+      fetchStocksInPortfolio(selectedStocklist, location);
     }
   }, [origin, selectedStocklist]); 
 
-  const fetchStocksInPortfolio = async (stocklistid) => {
+  const fetchStocksInPortfolio = async (stocklistid, location) => {
     try {
       let response;
-      if (origin === "review") {
+      console.log("origin " + origin);
+      if (location.state.origin === "portfolios"){
+        response = await axios.get(`${API_BASE_URL}/portfoliostock`, {
+          params: { userid: user, portfolioid: stocklistid }
+        });
+      }
+      else if (origin === "review") {
         // For public/shared stocklists
         console.log("Using /stockliststock-by-id endpoint");
         response = await axios.get(`${API_BASE_URL}/stockliststock-by-id`, {
           params: { stocklistid }
         });
       } else {
+        console.log(origin);
         // For user's own stocklists
         response = await axios.get(`${API_BASE_URL}/stockliststock`, {
           params: { userId: user, stocklistid }
@@ -184,7 +191,10 @@ function HistoricalStock() {
   };
 
   const handleBack = () => {
-    if (origin === 'review') {
+    if (origin === 'portfolios') {
+      navigate('/portfolios');
+    }
+    else if (origin === 'review') {
       navigate('/reviews');
     } else {
       if (selectedStocklist) {
@@ -219,7 +229,7 @@ function HistoricalStock() {
   return (
     <div className="historical-container">
     <button onClick={handleBack}>
-      {origin === 'review' ? '← Back to Review' : '← Back to Stocklist'}
+    ← Back
     </button>
     <h2>{activeTab === 'historical' ? 'Historical Prices (1 Share)' : 'Future Prediction (1 Share)'}: {stockCode}</h2>
 
