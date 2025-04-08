@@ -100,6 +100,12 @@ function Review() {
           }
       });
   };
+
+  const navigateToStatistics = (stocklistId) => {
+    navigate(`/stock-statistics/${stocklistId}`, { 
+      state: { origin: 'review' } 
+    });
+  };
   
 
     const fetchSharableStocklists = async () => {
@@ -584,12 +590,20 @@ function Review() {
                                             </div>
 
                                             {stocklistStocks[stocklist.stocklistid]?.length > 0 && (
+                                                <>
                                                 <button
-                                                    onClick={() => navigateToHistorical(stocklistStocks[stocklist.stocklistid][0].code, stocklist.stocklistid)}
-                                                    className="historical-btn"
+                                                  onClick={() => navigateToHistorical(stocklistStocks[stocklist.stocklistid][0].code, stocklist.stocklistid)}
+                                                  className="historical-btn"
                                                 >
-                                                    View Historical/Future Stocks
+                                                  View Historical/Future Stocks
                                                 </button>
+                                                <button
+                                                  onClick={() => navigateToStatistics(stocklist.stocklistid)}
+                                                  className="stats-btn"
+                                                >
+                                                  Show Statistics
+                                                </button>
+                                              </>
                                             )}
                                             
                                             <button
@@ -632,12 +646,20 @@ function Review() {
                                             </div>
 
                                             {stocklistStocks[stocklist.stocklistid]?.length > 0 && (
+                                                <>
                                                 <button
-                                                    onClick={() => navigateToHistorical(stocklistStocks[stocklist.stocklistid][0].code, stocklist.stocklistid)}
-                                                    className="historical-btn"
+                                                  onClick={() => navigateToHistorical(stocklistStocks[stocklist.stocklistid][0].code, stocklist.stocklistid)}
+                                                  className="historical-btn"
                                                 >
-                                                    View Historical/Future Stocks
+                                                  View Historical/Future Stocks
                                                 </button>
+                                                <button
+                                                  onClick={() => navigateToStatistics(stocklist.stocklistid)}
+                                                  className="stats-btn"
+                                                >
+                                                  Show Statistics
+                                                </button>
+                                              </>
                                             )}
                                             
                                             <div className="review-controls">
@@ -747,12 +769,20 @@ function Review() {
                                             </div>
 
                                             {stocklistStocks[stocklist.stocklistid]?.length > 0 && (
+                                                <>
                                                 <button
-                                                    onClick={() => navigateToHistorical(stocklistStocks[stocklist.stocklistid][0].code, stocklist.stocklistid)}
-                                                    className="historical-btn"
+                                                  onClick={() => navigateToHistorical(stocklistStocks[stocklist.stocklistid][0].code, stocklist.stocklistid)}
+                                                  className="historical-btn"
                                                 >
-                                                    View Historical/Future Stocks
+                                                  View Historical/Future Stocks
                                                 </button>
+                                                <button
+                                                  onClick={() => navigateToStatistics(stocklist.stocklistid)}
+                                                  className="stats-btn"
+                                                >
+                                                  Show Statistics
+                                                </button>
+                                              </>
                                             )}
                                             
                                             <button
@@ -795,12 +825,20 @@ function Review() {
                                             </div>
 
                                             {stocklistStocks[stocklist.stocklistid]?.length > 0 && (
+                                                <>
                                                 <button
-                                                    onClick={() => navigateToHistorical(stocklistStocks[stocklist.stocklistid][0].code, stocklist.stocklistid)}
-                                                    className="historical-btn"
+                                                  onClick={() => navigateToHistorical(stocklistStocks[stocklist.stocklistid][0].code, stocklist.stocklistid)}
+                                                  className="historical-btn"
                                                 >
-                                                    View Historical/Future Stocks
+                                                  View Historical/Future Stocks
                                                 </button>
+                                                <button
+                                                  onClick={() => navigateToStatistics(stocklist.stocklistid)}
+                                                  className="stats-btn"
+                                                >
+                                                  Show Statistics
+                                                </button>
+                                              </>
                                             )}
                                             
                                             <div className="review-controls">

@@ -24,6 +24,12 @@ function Stocklist() {
 
     const navigate = useNavigate();
     const location = useLocation();
+
+    const handleViewStatistics = (stocklistId) => {
+        navigate(`/stock-statistics/${stocklistId}`, { 
+          state: { origin: 'stocklists' } 
+        });
+      };
     // Fetch stocklists when component mounts or user changes but there might be a return choice from HistoricalStock.jsx
     useEffect(() => {
         if (user) {
@@ -255,6 +261,12 @@ function Stocklist() {
                 <div className="portfolio-contents">
                     <div className="portfolio-header">
                         <h3 className='stocklist-h3 '>Stocklist #{selectedStocklist} Contents</h3>
+                        <button 
+                        onClick={() => handleViewStatistics(selectedStocklist)}
+                        className="stats-button"
+                        >
+                        View Statistics
+                        </button>
                         <div className="stocklist-h3">
                             Total Value: ${stocklistValue}
                         </div>
