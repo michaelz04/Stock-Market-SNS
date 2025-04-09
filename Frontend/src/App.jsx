@@ -13,7 +13,7 @@ import Friend from "./Friend";
 import Navbar from "./Navbar";
 import Review from "./Review";
 import HistoricalStock from "./HistoricalStock";
-
+import StockStatistics from "./StockStatistics";
 export const UserContext = createContext();
 
 function App() {
@@ -47,6 +47,7 @@ function AppContent() {
         <Route path="/friends" element={<Friend />} />
         <Route path="/reviews" element={<Review />} />
         <Route path="/historical/:stockCode" element={<HistoricalStock />} />
+        <Route path="/stock-statistics/:stocklistId" element={<StockStatistics />} />
       </Routes>
     </>
   );

@@ -1645,3 +1645,114 @@ app.get("/stock-latest-price", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
+app.post("/stockstatistics", async (req, res) => {
+  const { stocklistId, startDate, endDate } = req.body;
+
+  function generateCovarianceSelect(codes) {
+    const selects = [];
+    for (let i = 0; i < codes.length; i++) {
+      for (let j = i; j < codes.length; j++) {
+        const code1 = codes[i];
+        const code2 = codes[j];
+        selects.push(`COVAR_SAMP("${code1}", "${code2}") AS "${code1}__${code2}"`);
+      }
+    }
+    return selects.join(",\n");
+  }
+
+  function generateCorrelationSelect(codes) {
+    const selects = [];
+    for (let i = 0; i < codes.length; i++) {
+      for (let j = i; j < codes.length; j++) {
+        const code1 = codes[i];
+        const code2 = codes[j];
+        selects.push(`CORR("${code1}", "${code2}") AS "${code1}__${code2}"`);
+      }
+    }
+    return selects.join(",\n");
+  }
+  
+  try {
+    // get stocks from stocklist
+    const stocks = await pool.query(
+      "SELECT code, noshares FROM stockliststock WHERE stocklistid = $1;",
+      [stocklistId]
+    );
+
+    for (const stock of stocks.rows) {
+      const cov = await pool.query(
+        "SELECT STDDEV_SAMP (close)/AVG(close) as cov FROM stock WHERE code = $1 AND timestamp BETWEEN $2 AND $3;",
+        [stock.code, startDate, endDate]
+      );
+
+      const beta = await pool.query(
+        "SELECT CORR(close, totalclose) AS beta FROM marketperformance JOIN stock ON marketperformance.timestamp = stock.timestamp WHERE code = $1 AND stock.timestamp BETWEEN $2 AND $3;",
+        [stock.code, startDate, endDate]
+      );
+
+      stock.cov = cov.rows[0].cov;
+      stock.beta = beta.rows[0].beta;
+    }
+
+    const codes = stocks.rows.map((row) => row.code);
+
+    if (codes.length < 1) {
+      return res.status(201).json({ 
+        message: "success", 
+        stocks: stocks.rows, 
+        covMatrix: {}, 
+        corMatrix: {} 
+      });
+    }
+
+    const covResult = await pool.query(`
+      WITH pivoted AS (
+        SELECT
+          timestamp,
+          ${codes.map(code => `MAX(CASE WHEN code = '${code}' THEN close END) AS "${code}"`).join(",\n")}
+        FROM stock
+        WHERE code = ANY($1) AND timestamp BETWEEN $2 AND $3
+        GROUP BY timestamp
+      )
+      SELECT ${generateCovarianceSelect(codes)} FROM pivoted;
+    `, [codes, startDate, endDate]);
+
+    const covMatrix = {};
+    for (let row of covResult.rows) {
+      for (let key in row) {
+        const [code1, code2] = key.split("__");
+        if (!covMatrix[code1]) covMatrix[code1] = {};
+        covMatrix[code1][code2] = row[key];
+      }
+    }
+
+    const corResult = await pool.query(`
+      WITH pivoted AS (
+        SELECT
+          timestamp,
+          ${codes.map(code => `MAX(CASE WHEN code = '${code}' THEN close END) AS "${code}"`).join(",\n")}
+        FROM stock
+        WHERE code = ANY($1) AND timestamp BETWEEN $2 AND $3
+        GROUP BY timestamp
+      )
+      SELECT ${generateCorrelationSelect(codes)} FROM pivoted;
+    `, [codes, startDate, endDate]);
+
+    const corMatrix = {};
+    for (let row of corResult.rows) {
+      for (let key in row) {
+        const [code1, code2] = key.split("__");
+        if (!corMatrix[code1]) corMatrix[code1] = {};
+        corMatrix[code1][code2] = row[key];
+      }
+    }
+
+    res.status(201).json({ message: "success", stocks: stocks.rows, covMatrix, corMatrix });
+    
+  } catch (error) {
+    console.log(error.message);
+    res.status(401).json({ message: "fail" });
+  }
+});
