@@ -51,6 +51,9 @@ function Portfolio() {
   }
 
   function handleDeletePortfolio(portfolioName) {
+    if (portfolios.length == 1){
+      return;
+    }
     axios
       .post("http://localhost:3001/deleteportfolio", {
         user,

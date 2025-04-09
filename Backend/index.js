@@ -21,6 +21,10 @@ app.post("/register", async (req, res) => {
       password,
     ]);
 
+    await pool.query("INSERT INTO portfolio (userId, portfolioId, cash) VALUES ($1, 'Default', 0)", [
+      username
+    ]);
+
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     // error inserting into db
@@ -208,11 +212,6 @@ app.post("/portfoliostatistics", async (req, res) => {
 
     const codes = stocks.rows.map((row) => row.code);
 
-    // if (codes.length < 2) {
-    //   console.log("a");
-    //   res.status(201).json({ message: "success", stocks: stocks.rows });
-    //   return;
-    // }
 
     const covResult = await pool.query(`
       WITH pivoted AS (
@@ -493,6 +492,8 @@ app.post("/addstock", async (req, res) => {
       "INSERT INTO stock (code, timestamp, open, high, low, close, volume) VALUES ($1, $2, $3, $4, $5, $6, $7);",
       [addCode, timestamp, open, high, low, close, volume]
     );
+
+    await pool.query("REFRESH MATERIALIZED VIEW marketperformance;")
 
     res.status(201).json({ message: "success" });
   } catch (error) {
@@ -1152,7 +1153,7 @@ app.get("/predict-stock", async (req, res) => {
 
     if (startDate < latestAvailableDate) {
       return res.status(400).json({
-        error: `Prediction date must be on or after ${
+        error: `Prediction date must be after ${
           latestAvailableDate.toISOString().split("T")[0]
         }`,
       });

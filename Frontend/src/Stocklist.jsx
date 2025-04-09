@@ -241,7 +241,7 @@ function Stocklist() {
                 >
                     <option value="private">Private</option>
                     <option value="public">Public</option>
-                    <option value="friend">Friends</option>
+                    <option value="friend">Shared</option>
                 </select>
                 <button onClick={handleCreateStocklist}>Create</button>
             </div>

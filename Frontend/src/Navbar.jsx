@@ -4,6 +4,7 @@ function Navbar(){
     return (
         <nav className="nav">
             <ul>
+                <li><a href="/home">Home</a></li>
                 <li><a href="/portfolios">Portfolios</a></li>
                 <li><a href="/stocklists">Stock Lists</a></li>
                 <li><a href="/friends">Friends</a></li>

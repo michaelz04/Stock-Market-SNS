@@ -17,6 +17,7 @@ function StockHolding({ portfolioId }) {
   const [buyError, setBuyError] = useState("");
   const [sellError, setSellError] = useState("");
   const [addError, setAddError] = useState("");
+  const [success, setSuccess] = useState("");
   const [stockHistory, setStockHistory] = useState([]);
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [timestamp, setTimestamp] = useState("");
@@ -119,13 +120,15 @@ function StockHolding({ portfolioId }) {
       .then((res) => {
         if (res.data.message == "success") {
           // success
-          setRefresh((prev) => !prev);
           setAddError("");
+          setSuccess("Added successfully")
+          setRefresh((prev) => !prev);
         }
       })
       .catch((err) => {
         console.log(err);
         setAddError("Error Adding");
+        setSuccess("");
       });
   }
 
@@ -278,8 +281,10 @@ function StockHolding({ portfolioId }) {
           <div className="input-button" onClick={handleAddStock}>
             Add
           </div>
+          {addError && <p className="error">{addError}</p>}
+          {success && <p className="success">{success}</p>}
         </div>
-        {addError && <p className="error">{addError}</p>}
+        
 
         <div>
           <h3 className="stock-center">Transaction History</h3>

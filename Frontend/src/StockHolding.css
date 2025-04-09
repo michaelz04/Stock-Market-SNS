@@ -25,3 +25,11 @@
     display: flex;
     gap: 50px;
 }
+
+.success {
+    display: flex;
+    flex-direction: column;
+    justify-items: center;
+    align-items: center;
+    color: green;
+}
